@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
+using Smena.Domain.Shifts;
 using Smena.Infrastructure.Identity;
 
 namespace Smena.Infrastructure.Persistence.Configurations;
@@ -78,5 +79,19 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(t => t.UserId);
 
         builder.Property<uint>("Version").IsRowVersion();
+    }
+}
+
+internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
+{
+    public void Configure(EntityTypeBuilder<Shift> builder)
+    {
+        builder.Property(s => s.Note).HasMaxLength(500);
+
+        builder.HasIndex(s => new { s.RestaurantId, s.StartsAt });
+        builder.HasIndex(s => new { s.EmployeeId, s.StartsAt });
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(s => s.RestaurantId);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Position>().WithMany().HasForeignKey(s => s.PositionId).OnDelete(DeleteBehavior.Restrict);
     }
 }

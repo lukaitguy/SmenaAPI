@@ -7,6 +7,7 @@ using Smena.Domain.Common;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
+using Smena.Domain.Shifts;
 using Smena.Infrastructure.Identity;
 
 namespace Smena.Infrastructure.Persistence;
@@ -24,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<Position> Positions => Set<Position>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<Shift> Shifts => Set<Shift>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     // EF parametrizuje filter ovim svojstvom za svaku instancu konteksta (jednu po zahtevu).

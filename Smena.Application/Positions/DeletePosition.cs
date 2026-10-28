@@ -12,6 +12,9 @@ public sealed class DeletePositionHandler(IAppDbContext db)
         if (position is null)
             return Error.NotFound("positions.not_found", "Pozicija nije pronađena.");
 
+        if (await db.Shifts.AnyAsync(s => s.PositionId == positionId, cancellationToken))
+            return Error.Conflict("positions.in_use", "Pozicija se koristi u smenama i ne može se obrisati.");
+
         db.Positions.Remove(position);
         await db.SaveChangesAsync(cancellationToken);
         return Result.Success();

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
+using Smena.Domain.Shifts;
 
 namespace Smena.Application.Abstractions;
 
@@ -16,6 +17,7 @@ public interface IAppDbContext
     DbSet<Position> Positions { get; }
     DbSet<Employee> Employees { get; }
     DbSet<Invitation> Invitations { get; }
+    DbSet<Shift> Shifts { get; }
 
     DatabaseFacade Database { get; }
 

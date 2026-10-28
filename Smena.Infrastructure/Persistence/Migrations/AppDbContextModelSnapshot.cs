@@ -289,6 +289,53 @@ namespace Smena.Infrastructure.Persistence.Migrations
                     b.ToTable("restaurants", (string)null);
                 });
 
+            modelBuilder.Entity("Smena.Domain.Shifts.Shift", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ends_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("PositionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("position_id");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_shifts");
+
+                    b.HasIndex("PositionId")
+                        .HasDatabaseName("ix_shifts_position_id");
+
+                    b.HasIndex("EmployeeId", "StartsAt")
+                        .HasDatabaseName("ix_shifts_employee_id_starts_at");
+
+                    b.HasIndex("RestaurantId", "StartsAt")
+                        .HasDatabaseName("ix_shifts_restaurant_id_starts_at");
+
+                    b.ToTable("shifts", (string)null);
+                });
+
             modelBuilder.Entity("Smena.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -523,6 +570,30 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_positions_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Smena.Domain.Shifts.Shift", b =>
+                {
+                    b.HasOne("Smena.Domain.Employees.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_shifts_employees_employee_id");
+
+                    b.HasOne("Smena.Domain.Restaurants.Position", null)
+                        .WithMany()
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_shifts_positions_position_id");
+
+                    b.HasOne("Smena.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_shifts_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Smena.Infrastructure.Identity.RefreshToken", b =>
