@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -26,7 +27,7 @@ public sealed class ApiClient(HttpClient http, string email)
     public static string NewEmail() => $"{Guid.NewGuid():N}@test.rs";
 
     /// <summary>Registruje novi restoran; vraćeni klijent je prijavljen kao njegov vlasnik.</summary>
-    public static async Task<ApiClient> RegisterOwnerAsync(ApiFactory factory)
+    public static async Task<ApiClient> RegisterOwnerAsync(WebApplicationFactory<Program> factory)
     {
         var email = NewEmail();
         var client = new ApiClient(factory.CreateClient(), email);
@@ -44,7 +45,7 @@ public sealed class ApiClient(HttpClient http, string email)
     }
 
     /// <summary>Poziva novog zaposlenog u isti restoran i vraća klijenta prijavljenog kao on.</summary>
-    public async Task<ApiClient> InviteAsync(ApiFactory factory, EmployeeRole role = EmployeeRole.Staff)
+    public async Task<ApiClient> InviteAsync(WebApplicationFactory<Program> factory, EmployeeRole role = EmployeeRole.Staff)
     {
         var email = NewEmail();
         var created = await ReadAsync<CreatedInvitationResponse>(

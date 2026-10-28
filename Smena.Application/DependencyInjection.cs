@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         ValidatorOptions.Global.LanguageManager.Culture = new CultureInfo("sr-Latn");
         services.AddSingleton(TimeProvider.System);
+        services.AddMemoryCache();
 
         return services;
     }

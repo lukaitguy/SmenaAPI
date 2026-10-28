@@ -73,6 +73,8 @@ Domenski testovi rade bez baze. Integracioni testovi dižu ceo API nad pravim Po
 | `Email:Host`, `Email:Port`, `Email:Username`, `Email:Password`, `Email:UseTls` | SMTP server za slanje mejlova. Ako `Email:Host` nije podešen, mejlovi se ne šalju (u log ide samo primalac i naslov). |
 | `Email:FromAddress`, `Email:FromName` | Pošiljalac mejlova |
 | `Database:MigrateOnStartup` | Automatska primena migracija |
+| `RateLimiting:Auth` / `RateLimiting:ForgotPassword` | `PermitLimit` i `WindowSeconds` po IP adresi (podrazumevano 10 zahteva u minutu, odnosno 3 u 15 minuta) |
+| `ForwardedHeaders:Enabled` | Čita pravu adresu klijenta iz `X-Forwarded-For`. Uključiti samo kad je API dostupan isključivo preko reverse proxy-ja. |
 
 U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` umesto `:` (npr. `ConnectionStrings__Smena`).
 
@@ -107,6 +109,12 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
 
 Primeri zahteva su u `Smena.API/SmenaAPI.http`.
+
+## Ograničenje broja zahteva
+
+Prijava, registracija, reset lozinke i pozivnice (`preview`, `accept`) dele zajednički budžet po IP adresi, a `forgot-password` ima stroži sopstveni. Kad se prekorači, API vraća `429` sa `Retry-After` zaglavljem. Pored toga, jedna email adresa dobija najviše 3 mejla za reset lozinke na sat, bez obzira sa koliko adresa stižu zahtevi.
+
+Brojači su u memoriji instance, pa sa više instanci API-ja kvota važi po instanci. Iza reverse proxy-ja uključi `ForwardedHeaders:Enabled`, inače svi klijenti dele adresu proxy-ja i istu kvotu.
 
 ## Mejlovi
 

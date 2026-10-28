@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Smena.Application.Invitations;
 using SmenaAPI.Infrastructure;
 
@@ -46,6 +47,7 @@ public sealed class InvitationsController : ControllerBase
 
     // Token ide u telo zahteva, ne u URL, da ne završi u logovima servera i proksija.
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiting.Auth)]
     [HttpPost("preview")]
     public async Task<ActionResult<InvitationPreviewDto>> Preview(
         InvitationTokenRequest request, GetInvitationPreviewHandler handler, CancellationToken cancellationToken)
@@ -55,6 +57,7 @@ public sealed class InvitationsController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiting.Auth)]
     [HttpPost("accept")]
     public async Task<ActionResult<AccessTokenResponse>> Accept(
         AcceptInvitationCommand command, AcceptInvitationHandler handler, CancellationToken cancellationToken)

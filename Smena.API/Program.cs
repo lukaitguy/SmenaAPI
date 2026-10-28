@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +21,20 @@ builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptio
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddRateLimiting(builder.Configuration);
+
+// Iza reverse proxy-ja (nginx, Traefik, load balancer) prava adresa klijenta stiže u X-Forwarded-For.
+// Uključuje se izričito, jer ga inače bilo ko može lažirati i zaobići ograničenje zahteva.
+// Uključiti samo kad je API dostupan isključivo preko proxy-ja.
+if (builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled"))
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 builder.Services.AddControllers()
@@ -60,6 +75,11 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
 }
 
+if (app.Configuration.GetValue<bool>("ForwardedHeaders:Enabled"))
+{
+    app.UseForwardedHeaders();
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -68,6 +88,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi().AllowAnonymous();
 }
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

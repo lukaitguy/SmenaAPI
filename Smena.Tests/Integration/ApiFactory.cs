@@ -24,6 +24,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             Environment.GetEnvironmentVariable("SMENA_TEST_CONNECTION") ?? DefaultConnection);
         builder.UseSetting("Jwt:SigningKey", "test-only-signing-key-0123456789abcdef0123456789");
         builder.UseSetting("Database:MigrateOnStartup", "true");
+
+        // Ostali testovi šalju mnogo zahteva sa iste adrese, pa je ograničenje praktično isključeno.
+        // RateLimitTests ga spušta na male vrednosti.
+        builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:ForgotPassword:PermitLimit", "100000");
         builder.ConfigureServices(services => services.AddSingleton<IEmailSender>(Emails));
     }
 }

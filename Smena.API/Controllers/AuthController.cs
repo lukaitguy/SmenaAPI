@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Smena.Application.Abstractions;
 using Smena.Application.Auth;
 using SmenaAPI.Infrastructure;
@@ -14,6 +15,7 @@ public sealed class AuthController : ControllerBase
 {
     /// <summary>Registracija novog restorana; prijavljeni korisnik postaje vlasnik.</summary>
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiting.Auth)]
     [HttpPost("register")]
     public async Task<ActionResult<AccessTokenResponse>> Register(
         RegisterRestaurantCommand command, RegisterRestaurantHandler handler, CancellationToken cancellationToken)
@@ -23,6 +25,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiting.Auth)]
     [HttpPost("login")]
     public async Task<ActionResult<AccessTokenResponse>> Login(
         LoginCommand command, LoginHandler handler, CancellationToken cancellationToken)
@@ -60,6 +63,7 @@ public sealed class AuthController : ControllerBase
 
     /// <summary>Šalje link za reset lozinke. Uvek vraća 204, da se ne otkrije koji nalozi postoje.</summary>
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiting.ForgotPassword)]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(
         ForgotPasswordCommand command, ForgotPasswordHandler handler, CancellationToken cancellationToken)
@@ -69,6 +73,7 @@ public sealed class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiting.Auth)]
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(
         ResetPasswordCommand command, ResetPasswordHandler handler, CancellationToken cancellationToken)
