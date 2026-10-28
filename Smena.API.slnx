@@ -3,4 +3,5 @@
   <Project Path="Smena.Domain/Smena.Domain.csproj" />
   <Project Path="Smena.Infrastructure/Smena.Infrastructure.csproj" />
   <Project Path="Smena.API/Smena.API.csproj" />
+  <Project Path="Smena.Tests/Smena.Tests.csproj" />
 </Solution>

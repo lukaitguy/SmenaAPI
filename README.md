@@ -39,6 +39,15 @@ dotnet run --project Smena.API
 
 API će slušati na http://localhost:5287.
 
+## Testovi
+
+```bash
+docker compose up -d db
+dotnet test Smena.Tests
+```
+
+Domenski testovi rade bez baze. Integracioni testovi dižu ceo API nad pravim PostgreSQL-om, u zasebnoj bazi `smena_tests` (kreira se i migrira automatski). Drugi server se zadaje promenljivom okruženja `SMENA_TEST_CONNECTION`.
+
 ## Konfiguracija
 
 | Ključ | Opis |
