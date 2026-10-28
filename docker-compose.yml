@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: smena
+      POSTGRES_USER: smena
+      POSTGRES_PASSWORD: smena_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - smena_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smena -d smena"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Smena: "Host=db;Port=5432;Database=smena;Username=smena;Password=smena_dev"
+      Jwt__SigningKey: "dev-only-signing-key-change-me-0123456789abcdef"
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "8080:8080"
+
+volumes:
+  smena_pgdata:

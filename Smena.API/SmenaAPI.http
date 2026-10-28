@@ -1,0 +1,69 @@
+@host = http://localhost:5287
+
+### Registracija restorana (vlasnik se odmah prijavljuje)
+# @name register
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "restaurantName": "Demo Bistro",
+  "firstName": "Luka",
+  "lastName": "Menadžer",
+  "email": "vlasnik@demo.rs",
+  "password": "lozinka123"
+}
+
+### Prijava
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "vlasnik@demo.rs",
+  "password": "lozinka123"
+}
+
+###
+@token = {{login.response.body.accessToken}}
+
+### Ko sam ja
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Pozicije restorana
+GET {{host}}/api/positions
+Authorization: Bearer {{token}}
+
+### Poziv za konobara
+# @name invite
+POST {{host}}/api/invitations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "konobar@demo.rs",
+  "role": "Staff"
+}
+
+### Poziv: pregled (javno, token iz odgovora iznad)
+POST {{host}}/api/invitations/preview
+Content-Type: application/json
+
+{ "token": "PASTE_TOKEN" }
+
+### Poziv: prihvatanje
+POST {{host}}/api/invitations/accept
+Content-Type: application/json
+
+{
+  "token": "PASTE_TOKEN",
+  "firstName": "Marko",
+  "lastName": "Konobar",
+  "password": "lozinka123"
+}
+
+### Osvežavanje (refresh token je u HttpOnly cookie-ju)
+POST {{host}}/api/auth/refresh
+
+### Odjava
+POST {{host}}/api/auth/logout
