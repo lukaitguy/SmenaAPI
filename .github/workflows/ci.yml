@@ -48,5 +48,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
+      - name: Build API image
         run: docker build -t smena-api .
+
+      - name: Build migration bundle image
+        run: docker build --target migrate -t smena-migrate .

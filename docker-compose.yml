@@ -15,6 +15,20 @@ services:
       timeout: 5s
       retries: 10
 
+  # Jednokratni posao: primenjuje migracije i staje. Isti princip važi i u produkciji,
+  # gde se bundle pokreće kao zaseban korak deploy-a, pre nego što krene novi API.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    environment:
+      ConnectionStrings__Smena: "Host=db;Port=5432;Database=smena;Username=smena;Password=smena_dev"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   mailpit:
     image: axllent/mailpit
     ports:
@@ -26,15 +40,15 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       mailpit:
         condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Smena: "Host=db;Port=5432;Database=smena;Username=smena;Password=smena_dev"
       Jwt__SigningKey: "dev-only-signing-key-change-me-0123456789abcdef"
-      Database__MigrateOnStartup: "true"
+      Database__MigrateOnStartup: "false"
       Email__Host: mailpit
       Email__Port: "1025"
       Email__UseTls: "false"

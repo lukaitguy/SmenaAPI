@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -19,13 +20,16 @@ namespace Smena.Infrastructure.Persistence;
 /// IgnoreQueryFilters(), što se lako nađe pretragom.
 /// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser currentUser)
-    : IdentityUserContext<ApplicationUser, Guid>(options), IAppDbContext
+    : IdentityUserContext<ApplicationUser, Guid>(options), IAppDbContext, IDataProtectionKeyContext
 {
     public DbSet<Restaurant> Restaurants => Set<Restaurant>();
     public DbSet<Position> Positions => Set<Position>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<Shift> Shifts => Set<Shift>();
+
+    /// <summary>Ključevi za DataProtection (npr. tokeni za reset lozinke); u bazi da prežive restart i više instanci.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     // EF parametrizuje filter ovim svojstvom za svaku instancu konteksta (jednu po zahtevu).

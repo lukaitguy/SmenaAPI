@@ -25,7 +25,7 @@ docker compose up --build
 - PostgreSQL: `localhost:5432` (baza `smena`, korisnik `smena`, lozinka `smena_dev`)
 - Mailpit (web pregled poslatih mejlova): http://localhost:8025
 
-Migracije se primenjuju automatski pri startu (`Database__MigrateOnStartup=true`).
+Migracije primenjuje servis `migrate` (migration bundle), pa tek onda kreće API.
 
 Zaustavljanje: `docker compose down` (dodaj `-v` da obrišeš i podatke baze).
 
@@ -39,6 +39,19 @@ dotnet run --project Smena.API
 ```
 
 API će slušati na http://localhost:5287.
+
+## Migracije
+
+Nova migracija: `dotnet ef migrations add <Naziv> -p Smena.Infrastructure -s Smena.API -o Persistence/Migrations`.
+
+Za produkciju se koristi migration bundle, samostalan izvršni fajl bez SDK-a, koji se pokreće kao zaseban korak deploy-a pre novog API-ja:
+
+```bash
+docker build --target migrate -t smena-migrate .
+docker run --rm -e ConnectionStrings__Smena="<connection string>" smena-migrate
+```
+
+Konekcioni string mora kroz env varijablu, jer bundle prvo diže host aplikacije. Lokalno (`dotnet run`) može i `Database:MigrateOnStartup=true`, što je podrazumevano uključeno samo u `appsettings.Development.json`. U produkciji ostaje isključeno.
 
 ## Testovi
 
