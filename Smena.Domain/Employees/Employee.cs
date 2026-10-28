@@ -43,4 +43,23 @@ public class Employee : IRestaurantScoped
         if (_positions.All(p => p.Id != position.Id))
             _positions.Add(position);
     }
+
+    public void Rename(string firstName, string lastName)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+    }
+
+    public void ChangeRole(EmployeeRole role) => Role = role;
+
+    public void ReplacePositions(IEnumerable<Position> positions)
+    {
+        _positions.Clear();
+        foreach (var position in positions)
+            AssignPosition(position);
+    }
+
+    public void Deactivate() => Status = EmployeeStatus.Inactive;
+
+    public void Activate() => Status = EmployeeStatus.Active;
 }
