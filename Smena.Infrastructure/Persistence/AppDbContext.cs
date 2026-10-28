@@ -27,6 +27,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<ShiftSwap> ShiftSwaps => Set<ShiftSwap>();
 
     /// <summary>Ključevi za DataProtection (npr. tokeni za reset lozinke); u bazi da prežive restart i više instanci.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();

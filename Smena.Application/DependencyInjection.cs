@@ -22,6 +22,7 @@ public static class DependencyInjection
         ValidatorOptions.Global.LanguageManager.Culture = new CultureInfo("sr-Latn");
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
+        services.AddScoped<Smena.Application.Swaps.SwapNotifier>();
 
         return services;
     }

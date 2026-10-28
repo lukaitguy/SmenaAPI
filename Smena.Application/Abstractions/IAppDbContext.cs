@@ -18,6 +18,7 @@ public interface IAppDbContext
     DbSet<Employee> Employees { get; }
     DbSet<Invitation> Invitations { get; }
     DbSet<Shift> Shifts { get; }
+    DbSet<ShiftSwap> ShiftSwaps { get; }
 
     DatabaseFacade Database { get; }
 

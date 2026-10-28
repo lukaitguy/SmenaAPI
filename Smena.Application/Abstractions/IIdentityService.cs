@@ -7,6 +7,9 @@ public interface IIdentityService
 {
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
 
+    /// <returns>Email adrese traženih korisnika, po id-u korisnika.</returns>
+    Task<IReadOnlyDictionary<Guid, string>> GetEmailsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken);
+
     Task<Result<Guid>> CreateUserAsync(string email, string password, CancellationToken cancellationToken);
 
     /// <returns>Id korisnika ili null ako email i lozinka ne odgovaraju (ili je nalog zaključan).</returns>

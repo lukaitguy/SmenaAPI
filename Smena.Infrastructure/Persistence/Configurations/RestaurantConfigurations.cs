@@ -82,6 +82,34 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
     }
 }
 
+internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwap>
+{
+    public void Configure(EntityTypeBuilder<ShiftSwap> builder)
+    {
+        builder.Property(s => s.Note).HasMaxLength(500);
+        builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20);
+
+        builder.HasIndex(s => new { s.RestaurantId, s.Status });
+        builder.HasIndex(s => s.ShiftId);
+        builder.HasIndex(s => s.RequesterEmployeeId);
+        builder.HasIndex(s => s.TargetEmployeeId);
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(s => s.RestaurantId);
+        builder.HasOne<Shift>().WithMany().HasForeignKey(s => s.ShiftId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.RequesterEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.TargetEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.DecidedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+
+        // Isti zahtev ne sme da se istovremeno upiše dvaput (npr. dva menadžera odlučuju odjednom).
+        builder.Property<uint>("Version").IsRowVersion();
+
+        // Za jednu smenu najviše jedan otvoren zahtev, i na nivou baze.
+        builder.HasIndex(s => s.ShiftId)
+            .HasDatabaseName("ux_shift_swaps_open_per_shift")
+            .IsUnique()
+            .HasFilter("status IN ('Pending', 'Accepted')");
+    }
+}
+
 internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
 {
     public void Configure(EntityTypeBuilder<Shift> builder)

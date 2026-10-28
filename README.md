@@ -109,6 +109,12 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | POST | `/api/shifts` | Manager/Owner, nova smena |
 | PUT | `/api/shifts/{id}` | Manager/Owner, izmena smene |
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
+| POST | `/api/swaps` | zaposleni traži da svoju buduću smenu prepusti kolegi (`shiftId`, `targetEmployeeId`, `note`) |
+| GET | `/api/swaps/mine?status=` | zahtevi u kojima učestvujem (kao podnosilac ili kolega) |
+| GET | `/api/swaps?status=` | Manager/Owner, svi zahtevi u restoranu |
+| POST | `/api/swaps/{id}/accept`, `/decline` | kolega kome je smena ponuđena |
+| POST | `/api/swaps/{id}/cancel` | podnosilac, dok zahtev nije završen |
+| POST | `/api/swaps/{id}/approve`, `/reject` | Manager/Owner; tek odobravanje prebacuje smenu na kolegu |
 
 Primeri zahteva su u `Smena.API/SmenaAPI.http`.
 
@@ -138,6 +144,15 @@ Brojači su u memoriji instance, pa sa više instanci API-ja kvota važi po inst
 Pozivnice se šalju preko SMTP-a (MailKit), pa radi sa bilo kojim servisom koji nudi SMTP (Resend, SendGrid, Gmail...). U produkciji lozinku zadaj kroz `Email__Password`. Lokalno Compose pokreće Mailpit, koji hvata sve mejlove umesto da ih šalje.
 
 Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
+
+## Prepuštanje smena
+
+Zaposleni A svoju buduću smenu nudi kolegi B. B prihvata ili odbija, a menadžer odobrava ili odbija prihvaćene zahteve. Smena menja vlasnika tek pri odobravanju.
+
+- Kolega mora biti aktivan, imati poziciju smene i biti slobodan u tom terminu. To se proverava pri zahtevu, pri prihvatanju i ponovo pri odobravanju.
+- Za jednu smenu može postojati samo jedan otvoren zahtev (`Pending` ili `Accepted`).
+- Mejl dobija kolega kad stigne zahtev, a oba zaposlena kad menadžer odluči.
+- Nije prava razmena (smena za smenu), samo prepuštanje.
 
 ## Uloge
 

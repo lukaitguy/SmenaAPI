@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
 
@@ -8,6 +9,11 @@ internal sealed class IdentityService(UserManager<ApplicationUser> userManager) 
 {
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken) =>
         await userManager.FindByEmailAsync(email) is not null;
+
+    public async Task<IReadOnlyDictionary<Guid, string>> GetEmailsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken) =>
+        await userManager.Users
+            .Where(u => userIds.Contains(u.Id) && u.Email != null)
+            .ToDictionaryAsync(u => u.Id, u => u.Email!, cancellationToken);
 
     public async Task<Result<Guid>> CreateUserAsync(string email, string password, CancellationToken cancellationToken)
     {
