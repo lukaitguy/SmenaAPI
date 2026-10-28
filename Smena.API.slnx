@@ -2,5 +2,5 @@
   <Project Path="Smena.Application/Smena.Application.csproj" />
   <Project Path="Smena.Domain/Smena.Domain.csproj" />
   <Project Path="Smena.Infrastructure/Smena.Infrastructure.csproj" />
-  <Project Path="SmenaAPI/Smena.API.csproj" />
+  <Project Path="Smena.API/Smena.API.csproj" />
 </Solution>
