@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: smena_tests
+          POSTGRES_USER: smena
+          POSTGRES_PASSWORD: smena_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smena -d smena_tests"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SMENA_TEST_CONNECTION: Host=localhost;Port=5432;Database=smena_tests;Username=smena;Password=smena_dev
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Smena.API.slnx
+
+      - name: Build
+        run: dotnet build Smena.API.slnx --no-restore -c Release
+
+      - name: Test
+        run: dotnet test Smena.API.slnx --no-build -c Release
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t smena-api .

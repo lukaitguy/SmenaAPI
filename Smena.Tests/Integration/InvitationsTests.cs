@@ -91,7 +91,7 @@ public class InvitationsTests(ApiFactory factory)
         var invitation = await InviteAsync(owner, email);
 
         Assert.False(invitation.EmailSent);
-        Assert.Empty(factory.Emails.Sent.Where(m => m.To == email));
+        Assert.DoesNotContain(factory.Emails.Sent, m => m.To == email);
         Assert.Equal(HttpStatusCode.OK, (await AcceptAsync(invitation)).StatusCode);
     }
 
