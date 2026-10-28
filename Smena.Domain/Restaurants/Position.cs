@@ -22,4 +22,6 @@ public class Position : IRestaurantScoped
     public Guid Id { get; private set; }
     public Guid RestaurantId { get; private set; }
     public string Name { get; private set; } = null!;
+
+    public void Rename(string name) => Name = name;
 }
