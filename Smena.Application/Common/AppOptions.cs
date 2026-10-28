@@ -9,4 +9,7 @@ public sealed class AppOptions
 
     public string InvitationLink(string token) =>
         $"{FrontendUrl.TrimEnd('/')}/join#{Uri.EscapeDataString(token)}";
+
+    public string PasswordResetLink(string email, string token) =>
+        $"{FrontendUrl.TrimEnd('/')}/reset-password#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
 }

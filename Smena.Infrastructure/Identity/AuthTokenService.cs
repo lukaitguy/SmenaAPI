@@ -83,6 +83,9 @@ internal sealed class AuthTokenService(AppDbContext db, IOptions<JwtOptions> opt
         }
     }
 
+    public Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken) =>
+        RevokeAllForUserAsync(userId, time.GetUtcNow(), cancellationToken);
+
     private async Task RevokeAllForUserAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken) =>
         await db.RefreshTokens
             .Where(t => t.UserId == userId && t.RevokedAt == null)

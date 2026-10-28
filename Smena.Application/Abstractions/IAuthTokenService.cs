@@ -20,4 +20,7 @@ public interface IAuthTokenService
     Task<Result<AuthTokens>> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
 
     Task RevokeAsync(string refreshToken, CancellationToken cancellationToken);
+
+    /// <summary>Odjavljuje korisnika sa svih uređaja (npr. posle promene lozinke).</summary>
+    Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken);
 }

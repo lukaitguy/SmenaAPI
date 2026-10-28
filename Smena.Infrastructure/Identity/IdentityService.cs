@@ -36,4 +36,33 @@ internal sealed class IdentityService(UserManager<ApplicationUser> userManager) 
         await userManager.ResetAccessFailedCountAsync(user);
         return user.Id;
     }
+
+    public async Task<string?> GeneratePasswordResetTokenAsync(string email, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        return user is null ? null : await userManager.GeneratePasswordResetTokenAsync(user);
+    }
+
+    public async Task<Result<Guid>> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken)
+    {
+        var invalidToken = Error.Validation("auth.invalid_reset_token", "Link za reset lozinke je neispravan ili je istekao.");
+
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null)
+            return invalidToken;
+
+        var result = await userManager.ResetPasswordAsync(user, token, newPassword);
+        if (!result.Succeeded)
+        {
+            if (result.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.InvalidToken)))
+                return invalidToken;
+
+            return Error.Validation("auth.identity", string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        // Ko je zaključan zbog pogrešnih pokušaja ne sme da ostane zaključan posle uspešnog reseta.
+        await userManager.SetLockoutEndDateAsync(user, null);
+        await userManager.ResetAccessFailedCountAsync(user);
+        return user.Id;
+    }
 }

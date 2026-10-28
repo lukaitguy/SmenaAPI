@@ -71,6 +71,8 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | POST | `/api/auth/login` | javno |
 | POST | `/api/auth/refresh` | refresh token (cookie) |
 | POST | `/api/auth/logout` | |
+| POST | `/api/auth/forgot-password` | javno, šalje link za reset lozinke (uvek 204) |
+| POST | `/api/auth/reset-password` | javno, `email` + `token` iz linka + `newPassword` |
 | GET | `/api/auth/me` | prijavljen korisnik |
 | POST | `/api/invitations` | Manager/Owner, kreiranje pozivnice; šalje mejl i vraća link (`emailSent` kaže da li je slanje uspelo) |
 | GET | `/api/invitations` | Manager/Owner, lista pozivnica |

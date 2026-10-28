@@ -58,6 +58,25 @@ public sealed class AuthController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Šalje link za reset lozinke. Uvek vraća 204, da se ne otkrije koji nalozi postoje.</summary>
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        ForgotPasswordCommand command, ForgotPasswordHandler handler, CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(command, cancellationToken);
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(
+        ResetPasswordCommand command, ResetPasswordHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(command, cancellationToken);
+        return result.IsSuccess ? NoContent() : this.ToProblem(result.Error!);
+    }
+
     [HttpGet("me")]
     public async Task<ActionResult<CurrentEmployeeDto>> Me(
         GetCurrentEmployeeHandler handler, CancellationToken cancellationToken)

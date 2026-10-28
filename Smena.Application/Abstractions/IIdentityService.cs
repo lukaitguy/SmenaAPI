@@ -11,4 +11,10 @@ public interface IIdentityService
 
     /// <returns>Id korisnika ili null ako email i lozinka ne odgovaraju (ili je nalog zaključan).</returns>
     Task<Guid?> ValidateCredentialsAsync(string email, string password, CancellationToken cancellationToken);
+
+    /// <returns>Token za reset lozinke ili null ako nalog sa tim emailom ne postoji.</returns>
+    Task<string?> GeneratePasswordResetTokenAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>Postavlja novu lozinku i skida zaključavanje naloga; vraća id korisnika.</summary>
+    Task<Result<Guid>> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken);
 }
