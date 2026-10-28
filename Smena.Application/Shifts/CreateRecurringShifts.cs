@@ -2,6 +2,8 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
+using Smena.Application.DayOffs;
+using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Shifts;
 
@@ -106,20 +108,33 @@ public sealed class CreateRecurringShiftsHandler(
                 .ToListAsync(cancellationToken))
                 .Select(s => (s.StartsAt, s.EndsAt)).ToList();
 
+        // Odobreni slobodni dani su isto što i zauzet termin.
+        var offDays = new HashSet<DateOnly>();
+        if (command.EmployeeId is { } offEmployeeId)
+        {
+            var firstDay = planned.Min(p => p.Date);
+            var lastDay = planned.Max(p => p.Date).AddDays(1);
+            offDays = (await db.DayOffRequests
+                .Where(d => d.EmployeeId == offEmployeeId && d.Status == DayOffStatus.Approved && d.Date >= firstDay && d.Date <= lastDay)
+                .Select(d => d.Date)
+                .ToListAsync(cancellationToken)).ToHashSet();
+        }
+
         var conflicts = planned
-            .Where(p => existing.Any(s => s.StartsAt < p.EndsAt && s.EndsAt > p.StartsAt))
+            .Where(p => existing.Any(s => s.StartsAt < p.EndsAt && s.EndsAt > p.StartsAt)
+                        || DayOffRules.CoveredDates(zone, p.StartsAt, p.EndsAt).Any(offDays.Contains))
             .ToList();
         if (conflicts.Count > 0 && command.OnConflict == ConflictPolicy.Fail)
         {
             var dates = string.Join(", ", conflicts.Take(5).Select(c => c.Date.ToString("dd.MM.")));
             var more = conflicts.Count > 5 ? $" i još {conflicts.Count - 5}" : "";
             return Error.Conflict("shifts.series_conflict",
-                $"Zaposleni već ima smenu u terminima: {dates}{more}. Nijedna smena nije napravljena.");
+                $"Zaposleni je zauzet (smena ili slobodan dan) u terminima: {dates}{more}. Nijedna smena nije napravljena.");
         }
 
         var toCreate = planned.Except(conflicts).ToList();
         if (toCreate.Count == 0)
-            return Error.Conflict("shifts.series_conflict", "Svi termini se preklapaju sa postojećim smenama.");
+            return Error.Conflict("shifts.series_conflict", "Svi termini su zauzeti (preklapanje sa smenama ili slobodni dani).");
 
         var seriesId = Guid.CreateVersion7();
         var restaurantId = currentUser.RestaurantId!.Value;

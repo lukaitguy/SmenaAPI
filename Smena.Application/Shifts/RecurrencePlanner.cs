@@ -39,7 +39,7 @@ public static class RecurrencePlanner
         return planned;
     }
 
-    private static DateTimeOffset ToUtc(TimeZoneInfo zone, DateTime local)
+    internal static DateTimeOffset ToUtc(TimeZoneInfo zone, DateTime local)
     {
         // Sat koji ne postoji (preskočen pri prelasku na letnje vreme) pomera se unapred.
         while (zone.IsInvalidTime(local))

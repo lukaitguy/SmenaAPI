@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
+using Smena.Application.DayOffs;
 using Smena.Domain.Employees;
 
 namespace Smena.Application.Shifts;
@@ -30,8 +31,12 @@ internal static class AssignmentRules
         var overlaps = await db.Shifts.AnyAsync(
             s => s.EmployeeId == employeeId && s.Id != ignoreShiftId && s.StartsAt < endsAt && s.EndsAt > startsAt,
             cancellationToken);
-        return overlaps
-            ? Error.Conflict("shifts.overlap", "Zaposleni već ima smenu u tom periodu.")
+        if (overlaps)
+            return Error.Conflict("shifts.overlap", "Zaposleni već ima smenu u tom periodu.");
+
+        var zone = await DayOffRules.RestaurantZoneAsync(db, cancellationToken);
+        return await DayOffRules.FindApprovedDayOffAsync(db, zone, employeeId, startsAt, endsAt, cancellationToken) is { } dayOff
+            ? Error.Conflict("shifts.day_off", $"Zaposleni ima odobren slobodan dan {dayOff:dd.MM.yyyy.}.")
             : null;
     }
 }

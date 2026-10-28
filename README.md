@@ -118,6 +118,11 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | GET | `/api/claims?status=` | Manager/Owner, svi zahtevi za otvorene smene |
 | POST | `/api/claims/{id}/cancel` | podnosilac, dok zahtev čeka odluku |
 | POST | `/api/claims/{id}/approve`, `/reject` | Manager/Owner; odobravanje dodeljuje smenu |
+| POST | `/api/dayoffs` | zaposleni traži slobodan dan (`date`, `reason`) |
+| GET | `/api/dayoffs/mine?status=&from=&to=` | moji zahtevi za slobodan dan |
+| GET | `/api/dayoffs?status=&from=&to=` | Manager/Owner, svi zahtevi (npr. `status=Approved` pri pravljenju rasporeda) |
+| POST | `/api/dayoffs/{id}/cancel` | podnosilac, i pending i odobren |
+| POST | `/api/dayoffs/{id}/approve`, `/reject` | Manager/Owner; `reject` odbija ili povlači odobren dan |
 | POST | `/api/swaps` | zaposleni traži da svoju buduću smenu prepusti kolegi (`shiftId`, `targetEmployeeId`, `note`) |
 | GET | `/api/swaps/mine?status=` | zahtevi u kojima učestvujem (kao podnosilac ili kolega) |
 | GET | `/api/swaps?status=` | Manager/Owner, svi zahtevi u restoranu |
@@ -193,6 +198,16 @@ Smena bez zaposlenog je **otvorena**. Menadžer je pravi kao običnu smenu ili s
 - Menadžer odobrava jedan zahtev: smena prelazi na tog zaposlenog, a ostali zahtevi za nju se odbijaju. Uslovi se proveravaju ponovo pri odobravanju. Dva istovremena odobravanja ne mogu oba da uspeju.
 - Ako menadžer otvorenu smenu dodeli direktno (`PUT /api/shifts/{id}` sa `employeeId`), zahtevi za nju se zatvaraju: odobren je onaj ko je dobio smenu, ostali su odbijeni. `employeeId: null` vraća dodeljenu smenu u otvorene.
 - Mejl dobija svako čiji je zahtev odobren ili odbijen. Zaposleni se ne obaveštavaju kad se otvorena smena objavi.
+
+## Slobodni dani
+
+Zaposleni traži slobodan dan za jedan datum (`POST /api/dayoffs`), a menadžer ga odobrava ili odbija. Nema ograničenja broja zahteva po nedelji.
+
+- Datum je kalendarski dan u zoni restorana: ne sme biti u prošlosti i može biti najviše 365 dana unapred. Za isti dan može postojati samo jedan zahtev koji čeka ili je odobren.
+- Slobodan dan se ne može odobriti dok zaposleni ima smenu koja dodiruje taj dan (nacrt ili objavljena, i smena preko ponoći iz prethodne večeri). Smene prvo treba ukloniti ili premestiti (409 `dayoffs.has_shifts`).
+- Dok je dan **odobren**, zaposlenom se ne može dodeliti smena koja ga dodiruje (409 `shifts.day_off`): ručna dodela, prepuštanje od kolege, preuzimanje otvorene smene, a serija ga tretira kao sukob (`Fail` odbija celu seriju, `Skip` preskače taj dan). Zahtev koji tek čeka odluku ne blokira ništa.
+- Menadžer može da povuče odobren dan (`reject`), a zaposleni da ga otkaže (`cancel`); dan se tada oslobađa.
+- Zaposleni dobija mejl kad menadžer odobri ili odbije zahtev. Menadžeri se ne obaveštavaju o novim zahtevima, vide ih u listi.
 
 ## Prepuštanje smena
 

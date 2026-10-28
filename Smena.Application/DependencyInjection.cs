@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<Smena.Application.Swaps.SwapNotifier>();
         services.AddScoped<Smena.Application.Shifts.SchedulePublishedNotifier>();
         services.AddScoped<Smena.Application.Claims.ClaimNotifier>();
+        services.AddScoped<Smena.Application.DayOffs.DayOffNotifier>();
 
         return services;
     }

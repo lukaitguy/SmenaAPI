@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
@@ -20,6 +21,7 @@ public interface IAppDbContext
     DbSet<Shift> Shifts { get; }
     DbSet<ShiftSwap> ShiftSwaps { get; }
     DbSet<ShiftClaim> ShiftClaims { get; }
+    DbSet<DayOffRequest> DayOffRequests { get; }
 
     DatabaseFacade Database { get; }
 

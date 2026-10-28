@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
@@ -79,6 +80,29 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(t => t.UserId);
 
         builder.Property<uint>("Version").IsRowVersion();
+    }
+}
+
+internal sealed class DayOffRequestConfiguration : IEntityTypeConfiguration<DayOffRequest>
+{
+    public void Configure(EntityTypeBuilder<DayOffRequest> builder)
+    {
+        builder.Property(d => d.Reason).HasMaxLength(500);
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(20);
+
+        builder.HasIndex(d => new { d.RestaurantId, d.Date });
+        builder.HasIndex(d => new { d.EmployeeId, d.Date });
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(d => d.RestaurantId);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(d => d.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(d => d.DecidedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property<uint>("Version").IsRowVersion();
+
+        // Za isti dan najviše jedan zahtev koji čeka ili je odobren, i na nivou baze.
+        builder.HasIndex(d => new { d.EmployeeId, d.Date })
+            .HasDatabaseName("ux_day_off_requests_active_per_day")
+            .IsUnique()
+            .HasFilter("status IN ('Pending', 'Approved')");
     }
 }
 

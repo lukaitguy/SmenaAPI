@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Domain.Common;
+using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
@@ -29,6 +30,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<Shift> Shifts => Set<Shift>();
     public DbSet<ShiftSwap> ShiftSwaps => Set<ShiftSwap>();
     public DbSet<ShiftClaim> ShiftClaims => Set<ShiftClaim>();
+    public DbSet<DayOffRequest> DayOffRequests => Set<DayOffRequest>();
 
     /// <summary>Ključevi za DataProtection (npr. tokeni za reset lozinke); u bazi da prežive restart i više instanci.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();

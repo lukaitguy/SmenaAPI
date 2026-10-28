@@ -126,6 +126,71 @@ namespace Smena.Infrastructure.Persistence.Migrations
                     b.ToTable("user_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Smena.Domain.DayOffs.DayOffRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<Guid?>("DecidedByEmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_employee_id");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_day_off_requests");
+
+                    b.HasIndex("DecidedByEmployeeId")
+                        .HasDatabaseName("ix_day_off_requests_decided_by_employee_id");
+
+                    b.HasIndex("EmployeeId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("ux_day_off_requests_active_per_day")
+                        .HasFilter("status IN ('Pending', 'Approved')");
+
+                    b.HasIndex("RestaurantId", "Date")
+                        .HasDatabaseName("ix_day_off_requests_restaurant_id_date");
+
+                    b.ToTable("day_off_requests", (string)null);
+                });
+
             modelBuilder.Entity("Smena.Domain.Employees.Employee", b =>
                 {
                     b.Property<Guid>("Id")
@@ -709,6 +774,29 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_tokens_users_user_id");
+                });
+
+            modelBuilder.Entity("Smena.Domain.DayOffs.DayOffRequest", b =>
+                {
+                    b.HasOne("Smena.Domain.Employees.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("DecidedByEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_day_off_requests_employees_decided_by_employee_id");
+
+                    b.HasOne("Smena.Domain.Employees.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_day_off_requests_employees_employee_id");
+
+                    b.HasOne("Smena.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_day_off_requests_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Smena.Domain.Employees.Employee", b =>
