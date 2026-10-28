@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Smena.Application;
 using Smena.Application.Abstractions;
+using Smena.Application.Common;
 using Smena.Infrastructure;
 using Smena.Infrastructure.Identity;
 using Smena.Infrastructure.Persistence;
@@ -15,6 +16,7 @@ using SmenaAPI.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection(AppOptions.SectionName));
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();

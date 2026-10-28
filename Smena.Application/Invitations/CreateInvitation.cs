@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
 using Smena.Domain.Employees;
@@ -24,6 +26,9 @@ public sealed class CreateInvitationHandler(
     ICurrentUser currentUser,
     IIdentityService identity,
     IValidator<CreateInvitationCommand> validator,
+    IEmailSender emailSender,
+    IOptions<AppOptions> appOptions,
+    ILogger<CreateInvitationHandler> logger,
     TimeProvider time)
 {
     public async Task<Result<CreatedInvitationDto>> HandleAsync(CreateInvitationCommand command, CancellationToken cancellationToken)
@@ -58,6 +63,38 @@ public sealed class CreateInvitationHandler(
         db.Invitations.Add(invitation);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new CreatedInvitationDto(invitation.ToDto(), token);
+        var acceptUrl = appOptions.Value.InvitationLink(token);
+        var emailSent = await TrySendEmailAsync(invitation, email, acceptUrl, cancellationToken);
+
+        return new CreatedInvitationDto(invitation.ToDto(), acceptUrl, emailSent);
+    }
+
+    /// <summary>
+    /// Poziv je već sačuvan, pa neuspešno slanje ne ruši zahtev: menadžer dobija link
+    /// i može da ga pošalje sam.
+    /// </summary>
+    private async Task<bool> TrySendEmailAsync(
+        Invitation invitation, string email, string acceptUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var restaurantName = await db.Restaurants
+                .Select(r => r.Name)
+                .FirstAsync(cancellationToken);
+            var invitedBy = await db.Employees
+                .Where(e => e.Id == invitation.InvitedByEmployeeId)
+                .Select(e => e.FirstName + " " + e.LastName)
+                .FirstAsync(cancellationToken);
+
+            await emailSender.SendAsync(
+                InvitationEmail.Build(email, restaurantName, invitedBy, acceptUrl, invitation.ExpiresAt),
+                cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Slanje pozivnice {InvitationId} nije uspelo.", invitation.Id);
+            return false;
+        }
     }
 }

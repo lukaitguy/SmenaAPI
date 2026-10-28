@@ -67,6 +67,35 @@ public class InvitationsTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task Invitation_email_is_sent_with_the_accept_link()
+    {
+        var owner = await ApiClient.RegisterOwnerAsync(factory);
+        var email = ApiClient.NewEmail();
+
+        var invitation = await InviteAsync(owner, email);
+
+        var message = Assert.Single(factory.Emails.Sent, m => m.To == email);
+        Assert.True(invitation.EmailSent);
+        Assert.Contains(invitation.AcceptUrl, message.TextBody);
+        Assert.Contains("Test restoran", message.Subject);
+        Assert.Contains("Vlasnik Test", message.TextBody);
+    }
+
+    [Fact]
+    public async Task Failed_email_does_not_fail_the_invitation()
+    {
+        var owner = await ApiClient.RegisterOwnerAsync(factory);
+        var email = ApiClient.NewEmail();
+        factory.Emails.FailFor(email);
+
+        var invitation = await InviteAsync(owner, email);
+
+        Assert.False(invitation.EmailSent);
+        Assert.Empty(factory.Emails.Sent.Where(m => m.To == email));
+        Assert.Equal(HttpStatusCode.OK, (await AcceptAsync(invitation)).StatusCode);
+    }
+
+    [Fact]
     public async Task Existing_account_email_conflicts()
     {
         var owner = await ApiClient.RegisterOwnerAsync(factory);

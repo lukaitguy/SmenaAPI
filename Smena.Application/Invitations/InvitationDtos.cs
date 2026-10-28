@@ -12,7 +12,7 @@ public sealed record InvitationDto(
     DateTimeOffset ExpiresAt);
 
 /// <summary>Token se vraća samo jednom, pri kreiranju; u bazi postoji samo njegov heš.</summary>
-public sealed record CreatedInvitationDto(InvitationDto Invitation, string Token);
+public sealed record CreatedInvitationDto(InvitationDto Invitation, string AcceptUrl, bool EmailSent);
 
 public sealed record InvitationPreviewDto(string RestaurantName, string Email, EmployeeRole Role, DateTimeOffset ExpiresAt);
 

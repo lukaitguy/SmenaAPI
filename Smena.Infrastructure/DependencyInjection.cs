@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Smena.Application.Abstractions;
+using Smena.Infrastructure.Email;
 using Smena.Infrastructure.Identity;
 using Smena.Infrastructure.Persistence;
 
@@ -38,6 +39,15 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IAuthTokenService, AuthTokenService>();
+
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        if (string.IsNullOrWhiteSpace(configuration[$"{EmailOptions.SectionName}:Host"]))
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
+        else
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
 
         return services;
     }

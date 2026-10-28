@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Smena.Application.Abstractions;
 
 namespace Smena.Tests.Integration;
 
@@ -13,6 +15,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     private const string DefaultConnection =
         "Host=localhost;Port=5432;Database=smena_tests;Username=smena;Password=smena_dev";
 
+    public FakeEmailSender Emails { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -20,5 +24,6 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             Environment.GetEnvironmentVariable("SMENA_TEST_CONNECTION") ?? DefaultConnection);
         builder.UseSetting("Jwt:SigningKey", "test-only-signing-key-0123456789abcdef0123456789");
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.ConfigureServices(services => services.AddSingleton<IEmailSender>(Emails));
     }
 }

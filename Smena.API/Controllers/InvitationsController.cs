@@ -5,17 +5,17 @@ using SmenaAPI.Infrastructure;
 
 namespace SmenaAPI.Controllers;
 
-public sealed record CreatedInvitationResponse(InvitationDto Invitation, string AcceptUrl);
+public sealed record CreatedInvitationResponse(InvitationDto Invitation, string AcceptUrl, bool EmailSent);
 
 public sealed record InvitationTokenRequest(string Token);
 
 [ApiController]
 [Route("api/invitations")]
-public sealed class InvitationsController(IConfiguration configuration) : ControllerBase
+public sealed class InvitationsController : ControllerBase
 {
     /// <summary>
-    /// Pravi poziv i vraća link za prihvatanje. Dok ne stigne slanje emaila (7. nedelja),
-    /// menadžer link šalje sam.
+    /// Pravi poziv i šalje ga emailom. Link se vraća i u odgovoru, pa ga menadžer može
+    /// poslati sam ako slanje nije uspelo (<c>emailSent: false</c>).
     /// </summary>
     [Authorize(Policy = Policies.Manager)]
     [HttpPost]
@@ -26,12 +26,9 @@ public sealed class InvitationsController(IConfiguration configuration) : Contro
         if (!result.IsSuccess)
             return this.ToProblem(result.Error!);
 
-        var frontendUrl = configuration["App:FrontendUrl"]!.TrimEnd('/');
-        var response = new CreatedInvitationResponse(
-            result.Value.Invitation,
-            $"{frontendUrl}/join#{Uri.EscapeDataString(result.Value.Token)}");
-
-        return StatusCode(StatusCodes.Status201Created, response);
+        var created = result.Value;
+        return StatusCode(StatusCodes.Status201Created,
+            new CreatedInvitationResponse(created.Invitation, created.AcceptUrl, created.EmailSent));
     }
 
     [Authorize(Policy = Policies.Manager)]
