@@ -7,6 +7,7 @@ using Smena.Application.Abstractions;
 using Smena.Infrastructure.Email;
 using Smena.Infrastructure.Identity;
 using Smena.Infrastructure.Persistence;
+using Smena.Infrastructure.Security;
 
 namespace Smena.Infrastructure;
 
@@ -24,7 +25,8 @@ public static class DependencyInjection
 
         services.AddDataProtection()
             .SetApplicationName("Smena")
-            .PersistKeysToDbContext<AppDbContext>();
+            .PersistKeysToDbContext<AppDbContext>()
+            .ProtectKeys(KeyProtectionOptions.From(configuration));
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

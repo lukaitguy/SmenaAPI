@@ -12,6 +12,7 @@ using Smena.Application.Common;
 using Smena.Infrastructure;
 using Smena.Infrastructure.Identity;
 using Smena.Infrastructure.Persistence;
+using Smena.Infrastructure.Security;
 using SmenaAPI.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,6 +68,13 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Policies.Manager, policy => policy.RequireRole(Policies.ManagerRoles));
 
 var app = builder.Build();
+
+if (!app.Environment.IsDevelopment() && !KeyProtectionOptions.From(app.Configuration).IsEncryptionConfigured)
+{
+    app.Logger.LogWarning(
+        "DataProtection ključevi se čuvaju nešifrovani u bazi. Postavi DataProtection:Certificate " +
+        "(Path ili Base64, uz Password) da se šifruju sertifikatom.");
+}
 
 if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 {

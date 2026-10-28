@@ -74,6 +74,8 @@ Domenski testovi rade bez baze. Integracioni testovi dižu ceo API nad pravim Po
 | `Email:FromAddress`, `Email:FromName` | Pošiljalac mejlova |
 | `Database:MigrateOnStartup` | Automatska primena migracija |
 | `RateLimiting:Auth` / `RateLimiting:ForgotPassword` | `PermitLimit` i `WindowSeconds` po IP adresi (podrazumevano 10 zahteva u minutu, odnosno 3 u 15 minuta) |
+| `DataProtection:Certificate:Path` ili `:Base64`, `:Password` | PFX sertifikat kojim se šifruju DataProtection ključevi u bazi (u Compose-u kroz `DATAPROTECTION_CERT_BASE64` i `DATAPROTECTION_CERT_PASSWORD`). Bez njega su ključevi nešifrovani, uz upozorenje u logu. |
+| `DataProtection:PreviousCertificate:*` | Prethodni sertifikat, samo dok traje rotacija |
 | `ForwardedHeaders:Enabled` | Čita pravu adresu klijenta iz `X-Forwarded-For`. Uključiti samo kad je API dostupan isključivo preko reverse proxy-ja. |
 
 U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` umesto `:` (npr. `ConnectionStrings__Smena`).
@@ -109,6 +111,21 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
 
 Primeri zahteva su u `Smena.API/SmenaAPI.http`.
+
+## Šifrovanje ključeva
+
+ASP.NET DataProtection ključevi (njima se potpisuju npr. tokeni za reset lozinke) čuvaju se u tabeli `data_protection_keys`. Da ne bi stajali u bazi u običnom tekstu, u produkciji ih šifruj sertifikatom:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 3650 -subj "/CN=smena-dataprotection"
+openssl pkcs12 -export -out keys.pfx -inkey key.pem -in cert.pem -passout pass:<lozinka>
+base64 -w0 keys.pfx   # vrednost za DataProtection__Certificate__Base64
+```
+
+Sertifikat i lozinku čuvaj u tajnama deploy okruženja (ne u repou) i nemoj ih gubiti: bez sertifikata se ključevi iz baze ne mogu pročitati, pa postojeći tokeni prestaju da važe.
+
+- Uključivanje šifrovanja ne prekida ništa: stari nešifrovani ključevi ostaju čitljivi, a novi se šifruju (stari se menjaju kad isteknu, posle oko 90 dana).
+- Rotacija: novi sertifikat stavi u `DataProtection:Certificate`, a stari u `DataProtection:PreviousCertificate`. Stari ukloni kad svi ključevi koje je šifrovao isteknu.
 
 ## Ograničenje broja zahteva
 

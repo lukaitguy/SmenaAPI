@@ -53,6 +53,9 @@ services:
       Email__Port: "1025"
       Email__UseTls: "false"
       App__FrontendUrl: "http://localhost:4200"
+      # Opciono: PFX sertifikat (base64) za šifrovanje DataProtection ključeva u bazi.
+      DataProtection__Certificate__Base64: "${DATAPROTECTION_CERT_BASE64:-}"
+      DataProtection__Certificate__Password: "${DATAPROTECTION_CERT_PASSWORD:-}"
     ports:
       - "8080:8080"
 
