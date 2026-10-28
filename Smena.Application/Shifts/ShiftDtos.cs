@@ -11,7 +11,8 @@ public sealed record ShiftDto(
     string PositionName,
     DateTimeOffset StartsAt,
     DateTimeOffset EndsAt,
-    string? Note);
+    string? Note,
+    Guid? SeriesId);
 
 internal static class ShiftQueries
 {
@@ -30,5 +31,6 @@ internal static class ShiftQueries
             p.Name,
             s.StartsAt,
             s.EndsAt,
-            s.Note);
+            s.Note,
+            s.SeriesId);
 }

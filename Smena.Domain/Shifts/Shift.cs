@@ -12,10 +12,13 @@ public class Shift : IRestaurantScoped
 
     private Shift() { }
 
-    public Shift(Guid restaurantId, Guid employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note)
+    public Shift(
+        Guid restaurantId, Guid employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note,
+        Guid? seriesId = null)
     {
         Id = Guid.CreateVersion7();
         RestaurantId = restaurantId;
+        SeriesId = seriesId;
         Reschedule(employeeId, positionId, startsAt, endsAt, note);
     }
 
@@ -26,6 +29,9 @@ public class Shift : IRestaurantScoped
     public DateTimeOffset StartsAt { get; private set; }
     public DateTimeOffset EndsAt { get; private set; }
     public string? Note { get; private set; }
+
+    /// <summary>Isti id imaju sve smene nastale jednim ponavljajućim rasporedom; null za pojedinačne smene.</summary>
+    public Guid? SeriesId { get; private set; }
 
     public void Reschedule(Guid employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note)
     {

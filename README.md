@@ -109,6 +109,8 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | POST | `/api/shifts` | Manager/Owner, nova smena |
 | PUT | `/api/shifts/{id}` | Manager/Owner, izmena smene |
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
+| POST | `/api/shifts/recurring` | Manager/Owner, smene po obrascu (dani u nedelji, od-do sat, period) |
+| DELETE | `/api/shifts/series/{seriesId}?from=` | Manager/Owner, briše buduće smene serije |
 | POST | `/api/swaps` | zaposleni traži da svoju buduću smenu prepusti kolegi (`shiftId`, `targetEmployeeId`, `note`) |
 | GET | `/api/swaps/mine?status=` | zahtevi u kojima učestvujem (kao podnosilac ili kolega) |
 | GET | `/api/swaps?status=` | Manager/Owner, svi zahtevi u restoranu |
@@ -144,6 +146,27 @@ Brojači su u memoriji instance, pa sa više instanci API-ja kvota važi po inst
 Pozivnice se šalju preko SMTP-a (MailKit), pa radi sa bilo kojim servisom koji nudi SMTP (Resend, SendGrid, Gmail...). U produkciji lozinku zadaj kroz `Email__Password`. Lokalno Compose pokreće Mailpit, koji hvata sve mejlove umesto da ih šalje.
 
 Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
+
+## Ponavljajuće smene
+
+`POST /api/shifts/recurring` razvija obrazac u obične smene, sve sa istim `seriesId`:
+
+```json
+{
+  "employeeId": "...", "positionId": "...",
+  "fromDate": "2026-11-02", "untilDate": "2026-12-27",
+  "daysOfWeek": ["Monday", "Wednesday", "Friday"],
+  "startTime": "08:00:00", "endTime": "16:00:00",
+  "note": "stalni raspored",
+  "onConflict": "Fail"
+}
+```
+
+- Sat je po lokalnom vremenu restorana, pa smena od 08:00 ostaje u 08:00 i kad se pomeri sat (u bazi je UTC). Kraj pre početka znači smena preko ponoći (22:00-06:00).
+- Period je najviše 180 dana, a smena najviše 16 sati. Zaposleni mora biti aktivan i imati poziciju, kao kod pojedinačne smene.
+- `onConflict: "Fail"` (podrazumevano) odbija celu seriju ako se bilo koji termin preklapa sa postojećom smenom (409, ništa se ne pravi). `"Skip"` preskače takve dane i vraća ih u `skipped`.
+- Svaka smena serije je obična smena: može se menjati, prepustiti kolegi ili obrisati pojedinačno i ostaje u seriji.
+- `DELETE /api/shifts/series/{seriesId}` briše smene serije od zadatog trenutka (podrazumevano od sada), a prošle ostaju kao istorija.
 
 ## Prepuštanje smena
 

@@ -39,6 +39,31 @@ public sealed class ShiftsController : ControllerBase
             : this.ToProblem(result.Error!);
     }
 
+    /// <summary>
+    /// Pravi smene po obrascu (dani u nedelji, od-do sat, period) u jednom koraku.
+    /// Sat se računa u zoni restorana. Sve smene serije dobijaju isti <c>seriesId</c>.
+    /// </summary>
+    [Authorize(Policy = Policies.Manager)]
+    [HttpPost("recurring")]
+    public async Task<ActionResult<RecurringShiftsResultDto>> CreateRecurring(
+        CreateRecurringShiftsCommand command, CreateRecurringShiftsHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(command, cancellationToken);
+        return result.IsSuccess
+            ? StatusCode(StatusCodes.Status201Created, result.Value)
+            : this.ToProblem(result.Error!);
+    }
+
+    /// <summary>Briše buduće smene serije (od <c>from</c>, podrazumevano od sada); prošle ostaju.</summary>
+    [Authorize(Policy = Policies.Manager)]
+    [HttpDelete("series/{seriesId:guid}")]
+    public async Task<ActionResult<DeletedShiftsDto>> DeleteSeries(
+        Guid seriesId, DateTimeOffset? from, DeleteShiftSeriesHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(seriesId, from, cancellationToken);
+        return result.IsSuccess ? result.Value : this.ToProblem(result.Error!);
+    }
+
     [Authorize(Policy = Policies.Manager)]
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ShiftDto>> Update(
