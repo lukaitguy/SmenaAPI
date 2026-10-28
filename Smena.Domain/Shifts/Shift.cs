@@ -33,6 +33,13 @@ public class Shift : IRestaurantScoped
     /// <summary>Isti id imaju sve smene nastale jednim ponavljajućim rasporedom; null za pojedinačne smene.</summary>
     public Guid? SeriesId { get; private set; }
 
+    /// <summary>Nova smena je nacrt (vidi je samo menadžer) dok je ne objavi; null znači nacrt.</summary>
+    public DateTimeOffset? PublishedAt { get; private set; }
+
+    public bool IsPublished => PublishedAt is not null;
+
+    public void Publish(DateTimeOffset now) => PublishedAt ??= now;
+
     public void Reschedule(Guid employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note)
     {
         EmployeeId = employeeId;

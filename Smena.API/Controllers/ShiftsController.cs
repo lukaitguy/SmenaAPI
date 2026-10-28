@@ -54,6 +54,16 @@ public sealed class ShiftsController : ControllerBase
             : this.ToProblem(result.Error!);
     }
 
+    /// <summary>
+    /// Objavljuje nacrte koji počinju u periodu [from, to) (npr. jedna nedelja) i obaveštava zaposlene mejlom.
+    /// Do objavljivanja smene vidi samo menadžer.
+    /// </summary>
+    [Authorize(Policy = Policies.Manager)]
+    [HttpPost("publish")]
+    public Task<PublishedShiftsDto> Publish(
+        PublishShiftsCommand command, PublishShiftsHandler handler, CancellationToken cancellationToken) =>
+        handler.HandleAsync(command, cancellationToken);
+
     /// <summary>Briše buduće smene serije (od <c>from</c>, podrazumevano od sada); prošle ostaju.</summary>
     [Authorize(Policy = Policies.Manager)]
     [HttpDelete("series/{seriesId:guid}")]

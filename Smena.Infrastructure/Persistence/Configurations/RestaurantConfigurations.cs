@@ -119,6 +119,7 @@ internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
         builder.HasIndex(s => new { s.RestaurantId, s.StartsAt });
         builder.HasIndex(s => new { s.EmployeeId, s.StartsAt });
         builder.HasIndex(s => s.SeriesId);
+        builder.HasIndex(s => new { s.EmployeeId, s.PublishedAt });
         builder.HasOne<Restaurant>().WithMany().HasForeignKey(s => s.RestaurantId);
         builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.EmployeeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Position>().WithMany().HasForeignKey(s => s.PositionId).OnDelete(DeleteBehavior.Restrict);

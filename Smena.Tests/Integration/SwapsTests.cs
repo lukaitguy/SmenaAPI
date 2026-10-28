@@ -32,9 +32,14 @@ public class SwapsTests(ApiFactory factory)
         return new Setup(owner, a, b, c, aId, bId, cId, position.Id, shift);
     }
 
-    private static async Task<ShiftDto> CreateShiftAsync(ApiClient owner, Guid employeeId, Guid positionId, DateTimeOffset from, DateTimeOffset to) =>
-        await ApiClient.ReadAsync<ShiftDto>(await owner.Http.PostAsJsonAsync("/api/shifts",
+    /// <summary>Pravi smenu i odmah je objavljuje, jer zaposleni nacrte ne vide.</summary>
+    private static async Task<ShiftDto> CreateShiftAsync(ApiClient owner, Guid employeeId, Guid positionId, DateTimeOffset from, DateTimeOffset to)
+    {
+        var shift = await ApiClient.ReadAsync<ShiftDto>(await owner.Http.PostAsJsonAsync("/api/shifts",
             new { employeeId, positionId, startsAt = from, endsAt = to }, ApiClient.Json));
+        await owner.PublishAsync(from, from.AddMinutes(1));
+        return shift;
+    }
 
     private static Task<HttpResponseMessage> Request(ApiClient client, Guid shiftId, Guid targetId, string? note = null) =>
         client.Http.PostAsJsonAsync("/api/swaps", new { shiftId, targetEmployeeId = targetId, note }, ApiClient.Json);

@@ -33,7 +33,8 @@ public sealed class CreateSwapHandler(
         var now = time.GetUtcNow();
 
         var shift = await db.Shifts.FirstOrDefaultAsync(s => s.Id == command.ShiftId, cancellationToken);
-        if (shift is null)
+        // Nacrt zaposleni ne vidi, pa za njega smena i ne postoji.
+        if (shift is null || !shift.IsPublished)
             return Error.NotFound("shifts.not_found", "Smena nije pronađena.");
         if (shift.EmployeeId != me)
             return Error.Forbidden("swaps.not_your_shift", "Možete prepustiti samo svoju smenu.");

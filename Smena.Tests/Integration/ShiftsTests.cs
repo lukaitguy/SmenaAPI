@@ -133,6 +133,7 @@ public class ShiftsTests(ApiFactory factory)
     {
         var s = await ArrangeAsync();
         await Create(s, 8, 16);
+        await s.Owner.PublishAsync(Day, Day.AddDays(1));
 
         var mine = await ApiClient.ReadAsync<List<ShiftDto>>(await s.Staff.Http.GetAsync($"/api/shifts/mine?{Range()}"));
         var ownersMine = await ApiClient.ReadAsync<List<ShiftDto>>(await s.Owner.Http.GetAsync($"/api/shifts/mine?{Range()}"));

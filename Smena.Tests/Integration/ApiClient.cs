@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Smena.Application.Auth;
 using Smena.Application.Employees;
 using Smena.Application.Positions;
+using Smena.Application.Shifts;
 using Smena.Domain.Employees;
 using SmenaAPI.Controllers;
 
@@ -67,6 +68,10 @@ public sealed class ApiClient(HttpClient http, string email)
 
     public void SetToken(AccessTokenResponse token) =>
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+
+    /// <summary>Objavljuje nacrte smena koje počinju u periodu [from, to).</summary>
+    public async Task<PublishedShiftsDto> PublishAsync(DateTimeOffset from, DateTimeOffset to) =>
+        await ReadAsync<PublishedShiftsDto>(await http.PostAsJsonAsync("/api/shifts/publish", new { from, to }, Json));
 
     public async Task<CurrentEmployeeDto> MeAsync() =>
         await ReadAsync<CurrentEmployeeDto>(await http.GetAsync("/api/auth/me"));

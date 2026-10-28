@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddScoped<Smena.Application.Swaps.SwapNotifier>();
+        services.AddScoped<Smena.Application.Shifts.SchedulePublishedNotifier>();
 
         return services;
     }

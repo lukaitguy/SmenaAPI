@@ -105,10 +105,11 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | PUT | `/api/employees/{id}` | Manager/Owner, ime, uloga i pozicije |
 | PUT | `/api/employees/{id}/status` | Manager/Owner, aktivacija/deaktivacija |
 | GET | `/api/shifts?from=&to=&employeeId=` | Manager/Owner, raspored za period (najviše 62 dana) |
-| GET | `/api/shifts/mine?from=&to=` | smene prijavljenog zaposlenog |
+| GET | `/api/shifts/mine?from=&to=` | objavljene smene prijavljenog zaposlenog |
 | POST | `/api/shifts` | Manager/Owner, nova smena |
 | PUT | `/api/shifts/{id}` | Manager/Owner, izmena smene |
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
+| POST | `/api/shifts/publish` | Manager/Owner, objavljuje nacrte u periodu `{ from, to }` i obaveštava zaposlene |
 | POST | `/api/shifts/recurring` | Manager/Owner, smene po obrascu (dani u nedelji, od-do sat, period) |
 | DELETE | `/api/shifts/series/{seriesId}?from=` | Manager/Owner, briše buduće smene serije |
 | POST | `/api/swaps` | zaposleni traži da svoju buduću smenu prepusti kolegi (`shiftId`, `targetEmployeeId`, `note`) |
@@ -146,6 +147,15 @@ Brojači su u memoriji instance, pa sa više instanci API-ja kvota važi po inst
 Pozivnice se šalju preko SMTP-a (MailKit), pa radi sa bilo kojim servisom koji nudi SMTP (Resend, SendGrid, Gmail...). U produkciji lozinku zadaj kroz `Email__Password`. Lokalno Compose pokreće Mailpit, koji hvata sve mejlove umesto da ih šalje.
 
 Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
+
+## Objavljivanje rasporeda
+
+Svaka nova smena (pojedinačna ili iz serije) je **nacrt** dok je menadžer ne objavi: vidi je samo menadžer (`publishedAt` je `null`). `POST /api/shifts/publish` sa `{ "from": ..., "to": ... }` objavljuje sve nacrte koji počinju u tom periodu (najviše 62 dana, npr. jedna nedelja).
+
+- Zaposleni vide samo objavljene smene (`/api/shifts/mine`) i samo za njih mogu da traže prepuštanje.
+- Svaki zaposleni dobija jedan mejl sa brojem svojih novih smena. Ponovno objavljivanje istog perioda ne šalje ništa novo.
+- Izmena već objavljene smene ostaje objavljena i vidi se odmah; zaposleni za to nisu posebno obavešteni.
+- Smene koje su postojale pre uvođenja objavljivanja važe kao objavljene.
 
 ## Ponavljajuće smene
 

@@ -336,6 +336,10 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("position_id");
 
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
                     b.Property<Guid>("RestaurantId")
                         .HasColumnType("uuid")
                         .HasColumnName("restaurant_id");
@@ -356,6 +360,9 @@ namespace Smena.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SeriesId")
                         .HasDatabaseName("ix_shifts_series_id");
+
+                    b.HasIndex("EmployeeId", "PublishedAt")
+                        .HasDatabaseName("ix_shifts_employee_id_published_at");
 
                     b.HasIndex("EmployeeId", "StartsAt")
                         .HasDatabaseName("ix_shifts_employee_id_starts_at");
