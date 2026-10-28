@@ -112,6 +112,12 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | POST | `/api/shifts/publish` | Manager/Owner, objavljuje nacrte u periodu `{ from, to }` i obaveštava zaposlene |
 | POST | `/api/shifts/recurring` | Manager/Owner, smene po obrascu (dani u nedelji, od-do sat, period) |
 | DELETE | `/api/shifts/series/{seriesId}?from=` | Manager/Owner, briše buduće smene serije |
+| GET | `/api/shifts/open?from=&to=` | otvorene smene koje mogu da tražim (objavljene, buduće, moje pozicije) |
+| POST | `/api/shifts/{id}/claims` | zahtev da preuzmem otvorenu smenu (`note`) |
+| GET | `/api/claims/mine?status=` | moji zahtevi za otvorene smene |
+| GET | `/api/claims?status=` | Manager/Owner, svi zahtevi za otvorene smene |
+| POST | `/api/claims/{id}/cancel` | podnosilac, dok zahtev čeka odluku |
+| POST | `/api/claims/{id}/approve`, `/reject` | Manager/Owner; odobravanje dodeljuje smenu |
 | POST | `/api/swaps` | zaposleni traži da svoju buduću smenu prepusti kolegi (`shiftId`, `targetEmployeeId`, `note`) |
 | GET | `/api/swaps/mine?status=` | zahtevi u kojima učestvujem (kao podnosilac ili kolega) |
 | GET | `/api/swaps?status=` | Manager/Owner, svi zahtevi u restoranu |
@@ -177,6 +183,16 @@ Svaka nova smena (pojedinačna ili iz serije) je **nacrt** dok je menadžer ne o
 - `onConflict: "Fail"` (podrazumevano) odbija celu seriju ako se bilo koji termin preklapa sa postojećom smenom (409, ništa se ne pravi). `"Skip"` preskače takve dane i vraća ih u `skipped`.
 - Svaka smena serije je obična smena: može se menjati, prepustiti kolegi ili obrisati pojedinačno i ostaje u seriji.
 - `DELETE /api/shifts/series/{seriesId}` briše smene serije od zadatog trenutka (podrazumevano od sada), a prošle ostaju kao istorija.
+
+## Otvorene smene
+
+Smena bez zaposlenog je **otvorena**. Menadžer je pravi kao običnu smenu ili seriju, samo bez `employeeId`, i objavljuje je kao ostale.
+
+- Zaposleni u `GET /api/shifts/open` vide objavljene otvorene smene koje tek počinju, i to samo za pozicije koje imaju.
+- Zahtev za preuzimanje (`POST /api/shifts/{id}/claims`) može da podnese svako ko je aktivan, ima poziciju smene i slobodan je u tom terminu. Za istu smenu može da traži više ljudi, ali svako najviše jednom dok mu zahtev čeka odluku.
+- Menadžer odobrava jedan zahtev: smena prelazi na tog zaposlenog, a ostali zahtevi za nju se odbijaju. Uslovi se proveravaju ponovo pri odobravanju. Dva istovremena odobravanja ne mogu oba da uspeju.
+- Ako menadžer otvorenu smenu dodeli direktno (`PUT /api/shifts/{id}` sa `employeeId`), zahtevi za nju se zatvaraju: odobren je onaj ko je dobio smenu, ostali su odbijeni. `employeeId: null` vraća dodeljenu smenu u otvorene.
+- Mejl dobija svako čiji je zahtev odobren ili odbijen. Zaposleni se ne obaveštavaju kad se otvorena smena objavi.
 
 ## Prepuštanje smena
 

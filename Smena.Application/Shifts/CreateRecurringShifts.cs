@@ -16,8 +16,9 @@ public enum ConflictPolicy
     Skip = 1,
 }
 
+/// <param name="EmployeeId">Izostavljen znači da se prave otvorene smene.</param>
 public sealed record CreateRecurringShiftsCommand(
-    Guid EmployeeId,
+    Guid? EmployeeId,
     Guid PositionId,
     DateOnly FromDate,
     DateOnly UntilDate,
@@ -39,7 +40,7 @@ public sealed class CreateRecurringShiftsValidator : AbstractValidator<CreateRec
 
     public CreateRecurringShiftsValidator()
     {
-        RuleFor(x => x.EmployeeId).NotEmpty();
+        RuleFor(x => x.EmployeeId).NotEqual(Guid.Empty);
         RuleFor(x => x.PositionId).NotEmpty();
         RuleFor(x => x.DaysOfWeek).NotEmpty().WithMessage("Izaberite bar jedan dan u nedelji.");
         RuleForEach(x => x.DaysOfWeek).IsInEnum();
@@ -68,15 +69,22 @@ public sealed class CreateRecurringShiftsHandler(
     {
         await validator.ValidateAndThrowAsync(command, cancellationToken);
 
-        var employee = await db.Employees
-            .Include(e => e.Positions)
-            .FirstOrDefaultAsync(e => e.Id == command.EmployeeId, cancellationToken);
-        if (employee is null)
-            return Error.NotFound("employees.not_found", "Zaposleni nije pronađen.");
-        if (employee.Status != EmployeeStatus.Active)
-            return Error.Conflict("shifts.employee_inactive", "Zaposleni nije aktivan.");
-        if (employee.Positions.All(p => p.Id != command.PositionId))
-            return Error.Conflict("shifts.position_not_assigned", "Zaposleni nema ovu poziciju.");
+        if (command.EmployeeId is { } employeeId)
+        {
+            var employee = await db.Employees
+                .Include(e => e.Positions)
+                .FirstOrDefaultAsync(e => e.Id == employeeId, cancellationToken);
+            if (employee is null)
+                return Error.NotFound("employees.not_found", "Zaposleni nije pronađen.");
+            if (employee.Status != EmployeeStatus.Active)
+                return Error.Conflict("shifts.employee_inactive", "Zaposleni nije aktivan.");
+            if (employee.Positions.All(p => p.Id != command.PositionId))
+                return Error.Conflict("shifts.position_not_assigned", "Zaposleni nema ovu poziciju.");
+        }
+        else if (!await db.Positions.AnyAsync(p => p.Id == command.PositionId, cancellationToken))
+        {
+            return Error.NotFound("positions.not_found", "Pozicija nije pronađena.");
+        }
 
         var timeZoneId = await db.Restaurants.Select(r => r.TimeZoneId).FirstAsync(cancellationToken);
         if (!TryFindZone(timeZoneId, out var zone))
@@ -89,10 +97,14 @@ public sealed class CreateRecurringShiftsHandler(
 
         var windowStart = planned.Min(p => p.StartsAt);
         var windowEnd = planned.Max(p => p.EndsAt);
-        var existing = await db.Shifts
-            .Where(s => s.EmployeeId == command.EmployeeId && s.StartsAt < windowEnd && s.EndsAt > windowStart)
-            .Select(s => new { s.StartsAt, s.EndsAt })
-            .ToListAsync(cancellationToken);
+        // Otvorene smene nemaju zaposlenog, pa nema ni preklapanja.
+        var existing = command.EmployeeId is null
+            ? []
+            : (await db.Shifts
+                .Where(s => s.EmployeeId == command.EmployeeId && s.StartsAt < windowEnd && s.EndsAt > windowStart)
+                .Select(s => new { s.StartsAt, s.EndsAt })
+                .ToListAsync(cancellationToken))
+                .Select(s => (s.StartsAt, s.EndsAt)).ToList();
 
         var conflicts = planned
             .Where(p => existing.Any(s => s.StartsAt < p.EndsAt && s.EndsAt > p.StartsAt))

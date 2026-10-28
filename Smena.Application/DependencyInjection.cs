@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddScoped<Smena.Application.Swaps.SwapNotifier>();
         services.AddScoped<Smena.Application.Shifts.SchedulePublishedNotifier>();
+        services.AddScoped<Smena.Application.Claims.ClaimNotifier>();
 
         return services;
     }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Smena.Application.Claims;
 using Smena.Application.Shifts;
 using SmenaAPI.Infrastructure;
 
@@ -26,6 +27,26 @@ public sealed class ShiftsController : ControllerBase
     {
         var result = await handler.HandleMineAsync(from, to, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : this.ToProblem(result.Error!);
+    }
+
+    /// <summary>Otvorene smene (bez zaposlenog) koje prijavljeni zaposleni može da traži, po svojim pozicijama.</summary>
+    [HttpGet("open")]
+    public async Task<ActionResult<IReadOnlyList<ShiftDto>>> Open(
+        DateTimeOffset from, DateTimeOffset to, ListShiftsHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleOpenAsync(from, to, cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : this.ToProblem(result.Error!);
+    }
+
+    /// <summary>Zahtev da prijavljeni zaposleni preuzme otvorenu smenu; odlučuje menadžer.</summary>
+    [HttpPost("{id:guid}/claims")]
+    public async Task<ActionResult<ClaimDto>> Claim(
+        Guid id, CreateClaimCommand command, CreateClaimHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(id, command, cancellationToken);
+        return result.IsSuccess
+            ? StatusCode(StatusCodes.Status201Created, result.Value)
+            : this.ToProblem(result.Error!);
     }
 
     [Authorize(Policy = Policies.Manager)]

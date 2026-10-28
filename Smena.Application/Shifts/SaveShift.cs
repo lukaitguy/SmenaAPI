@@ -1,14 +1,15 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
+using Smena.Application.Claims;
 using Smena.Application.Common;
-using Smena.Domain.Employees;
 using Smena.Domain.Shifts;
 
 namespace Smena.Application.Shifts;
 
+/// <param name="EmployeeId">Zaposleni kome se dodeljuje smena; izostavljen znači otvorena smena.</param>
 public sealed record SaveShiftCommand(
-    Guid EmployeeId,
+    Guid? EmployeeId,
     Guid PositionId,
     DateTimeOffset StartsAt,
     DateTimeOffset EndsAt,
@@ -18,7 +19,7 @@ public sealed class SaveShiftValidator : AbstractValidator<SaveShiftCommand>
 {
     public SaveShiftValidator()
     {
-        RuleFor(x => x.EmployeeId).NotEmpty();
+        RuleFor(x => x.EmployeeId).NotEqual(Guid.Empty);
         RuleFor(x => x.PositionId).NotEmpty();
         RuleFor(x => x.EndsAt).GreaterThan(x => x.StartsAt)
             .WithMessage("Kraj smene mora biti posle početka.");
@@ -33,7 +34,9 @@ public sealed class SaveShiftValidator : AbstractValidator<SaveShiftCommand>
 public sealed class SaveShiftHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
-    IValidator<SaveShiftCommand> validator)
+    IValidator<SaveShiftCommand> validator,
+    ClaimNotifier claimNotifier,
+    TimeProvider time)
 {
     public Task<Result<ShiftDto>> CreateAsync(SaveShiftCommand command, CancellationToken cancellationToken) =>
         SaveAsync(null, command, cancellationToken);
@@ -51,24 +54,20 @@ public sealed class SaveShiftHandler(
         if (shiftId is not null && shift is null)
             return Error.NotFound("shifts.not_found", "Smena nije pronađena.");
 
-        var employee = await db.Employees
-            .Include(e => e.Positions)
-            .FirstOrDefaultAsync(e => e.Id == command.EmployeeId, cancellationToken);
-        if (employee is null)
-            return Error.NotFound("employees.not_found", "Zaposleni nije pronađen.");
-        if (employee.Status != EmployeeStatus.Active)
-            return Error.Conflict("shifts.employee_inactive", "Zaposleni nije aktivan.");
-        if (employee.Positions.All(p => p.Id != command.PositionId))
-            return Error.Conflict("shifts.position_not_assigned", "Zaposleni nema ovu poziciju.");
-
         var startsAt = command.StartsAt.ToUniversalTime();
         var endsAt = command.EndsAt.ToUniversalTime();
-        var overlaps = await db.Shifts.AnyAsync(
-            s => s.EmployeeId == command.EmployeeId && s.Id != shiftId && s.StartsAt < endsAt && s.EndsAt > startsAt,
-            cancellationToken);
-        if (overlaps)
-            return Error.Conflict("shifts.overlap", "Zaposleni već ima smenu u tom periodu.");
 
+        if (command.EmployeeId is { } employeeId)
+        {
+            if (await AssignmentRules.CheckAsync(db, employeeId, command.PositionId, startsAt, endsAt, shiftId, cancellationToken) is { } error)
+                return error;
+        }
+        else if (!await db.Positions.AnyAsync(p => p.Id == command.PositionId, cancellationToken))
+        {
+            return Error.NotFound("positions.not_found", "Pozicija nije pronađena.");
+        }
+
+        IReadOnlyCollection<ShiftClaim> resolvedClaims = [];
         if (shift is null)
         {
             shift = new Shift(currentUser.RestaurantId!.Value, command.EmployeeId, command.PositionId, startsAt, endsAt, command.Note);
@@ -76,10 +75,18 @@ public sealed class SaveShiftHandler(
         }
         else
         {
+            var wasOpen = shift.IsOpen;
             shift.Reschedule(command.EmployeeId, command.PositionId, startsAt, endsAt, command.Note);
+
+            // Menadžer je otvorenu smenu dodelio direktno: zahtevi za nju se zatvaraju.
+            if (wasOpen && command.EmployeeId is not null)
+                resolvedClaims = await ClaimResolution.ResolveAsync(
+                    db, shift, command.EmployeeId.Value, currentUser.EmployeeId!.Value, time.GetUtcNow(), cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await claimNotifier.DecidedAsync(resolvedClaims, cancellationToken);
+
         return await db.ProjectToDto(db.Shifts.Where(s => s.Id == shift.Id)).FirstAsync(cancellationToken);
     }
 }

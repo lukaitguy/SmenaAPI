@@ -13,7 +13,7 @@ public class Shift : IRestaurantScoped
     private Shift() { }
 
     public Shift(
-        Guid restaurantId, Guid employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note,
+        Guid restaurantId, Guid? employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note,
         Guid? seriesId = null)
     {
         Id = Guid.CreateVersion7();
@@ -24,7 +24,12 @@ public class Shift : IRestaurantScoped
 
     public Guid Id { get; private set; }
     public Guid RestaurantId { get; private set; }
-    public Guid EmployeeId { get; private set; }
+
+    /// <summary>Zaposleni kome je smena dodeljena; null je otvorena smena koju zaposleni mogu da traže.</summary>
+    public Guid? EmployeeId { get; private set; }
+
+    public bool IsOpen => EmployeeId is null;
+
     public Guid PositionId { get; private set; }
     public DateTimeOffset StartsAt { get; private set; }
     public DateTimeOffset EndsAt { get; private set; }
@@ -40,7 +45,7 @@ public class Shift : IRestaurantScoped
 
     public void Publish(DateTimeOffset now) => PublishedAt ??= now;
 
-    public void Reschedule(Guid employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note)
+    public void Reschedule(Guid? employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note)
     {
         EmployeeId = employeeId;
         PositionId = positionId;

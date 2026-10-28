@@ -70,7 +70,7 @@ public sealed class SchedulePublishedNotifier(
         try
         {
             var timeZoneId = await db.Restaurants.Select(r => r.TimeZoneId).FirstAsync(cancellationToken);
-            var byEmployee = published.GroupBy(s => s.EmployeeId).ToList();
+            var byEmployee = published.Where(s => s.EmployeeId is not null).GroupBy(s => s.EmployeeId!.Value).ToList();
             var employeeIds = byEmployee.Select(g => g.Key).ToList();
             var userIds = await db.Employees
                 .Where(e => employeeIds.Contains(e.Id))

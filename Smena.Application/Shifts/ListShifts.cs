@@ -4,7 +4,7 @@ using Smena.Application.Common;
 
 namespace Smena.Application.Shifts;
 
-public sealed class ListShiftsHandler(IAppDbContext db, ICurrentUser currentUser)
+public sealed class ListShiftsHandler(IAppDbContext db, ICurrentUser currentUser, TimeProvider time)
 {
     /// <summary>Raspored restorana za period, uključujući nacrte; menadžer može da suzi na jednog zaposlenog.</summary>
     public Task<Result<IReadOnlyList<ShiftDto>>> HandleAsync(
@@ -16,13 +16,44 @@ public sealed class ListShiftsHandler(IAppDbContext db, ICurrentUser currentUser
         DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
         QueryAsync(from, to, currentUser.EmployeeId, publishedOnly: true, cancellationToken);
 
-    private async Task<Result<IReadOnlyList<ShiftDto>>> QueryAsync(
-        DateTimeOffset from, DateTimeOffset to, Guid? employeeId, bool publishedOnly, CancellationToken cancellationToken)
+    /// <summary>
+    /// Objavljene otvorene smene koje tek počinju, samo za pozicije koje prijavljeni zaposleni ima.
+    /// </summary>
+    public async Task<Result<IReadOnlyList<ShiftDto>>> HandleOpenAsync(
+        DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    {
+        if (ValidateRange(from, to) is { } error)
+            return error;
+
+        var earliest = new[] { from.ToUniversalTime(), time.GetUtcNow() }.Max();
+        var latest = to.ToUniversalTime();
+        var myPositions = await db.Employees
+            .Where(e => e.Id == currentUser.EmployeeId)
+            .SelectMany(e => e.Positions.Select(p => p.Id))
+            .ToListAsync(cancellationToken);
+
+        var shifts = db.Shifts.Where(s =>
+            s.EmployeeId == null && s.PublishedAt != null &&
+            s.StartsAt >= earliest && s.StartsAt < latest &&
+            myPositions.Contains(s.PositionId));
+
+        return await db.ProjectToDto(shifts).ToListAsync(cancellationToken);
+    }
+
+    private static Error? ValidateRange(DateTimeOffset from, DateTimeOffset to)
     {
         if (to <= from)
             return Error.Validation("shifts.invalid_range", "Kraj perioda mora biti posle početka.");
         if (to - from > TimeSpan.FromDays(ShiftQueries.MaxRangeDays))
             return Error.Validation("shifts.range_too_long", $"Period ne može biti duži od {ShiftQueries.MaxRangeDays} dana.");
+        return null;
+    }
+
+    private async Task<Result<IReadOnlyList<ShiftDto>>> QueryAsync(
+        DateTimeOffset from, DateTimeOffset to, Guid? employeeId, bool publishedOnly, CancellationToken cancellationToken)
+    {
+        if (ValidateRange(from, to) is { } error)
+            return error;
 
         var fromUtc = from.ToUniversalTime();
         var toUtc = to.ToUniversalTime();

@@ -19,6 +19,7 @@ public interface IAppDbContext
     DbSet<Invitation> Invitations { get; }
     DbSet<Shift> Shifts { get; }
     DbSet<ShiftSwap> ShiftSwaps { get; }
+    DbSet<ShiftClaim> ShiftClaims { get; }
 
     DatabaseFacade Database { get; }
 

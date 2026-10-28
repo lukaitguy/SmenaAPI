@@ -82,6 +82,31 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
     }
 }
 
+internal sealed class ShiftClaimConfiguration : IEntityTypeConfiguration<ShiftClaim>
+{
+    public void Configure(EntityTypeBuilder<ShiftClaim> builder)
+    {
+        builder.Property(c => c.Note).HasMaxLength(500);
+        builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(20);
+
+        builder.HasIndex(c => new { c.RestaurantId, c.Status });
+        builder.HasIndex(c => c.EmployeeId);
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(c => c.RestaurantId);
+        builder.HasOne<Shift>().WithMany().HasForeignKey(c => c.ShiftId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(c => c.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(c => c.DecidedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property<uint>("Version").IsRowVersion();
+
+        // Zaposleni ima najviše jedan zahtev na čekanju za istu smenu.
+        builder.HasIndex(c => new { c.ShiftId, c.EmployeeId })
+            .HasDatabaseName("ux_shift_claims_pending_per_employee")
+            .IsUnique()
+            .HasFilter("status = 'Pending'");
+        builder.HasIndex(c => c.ShiftId);
+    }
+}
+
 internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwap>
 {
     public void Configure(EntityTypeBuilder<ShiftSwap> builder)
@@ -114,6 +139,9 @@ internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
 {
     public void Configure(EntityTypeBuilder<Shift> builder)
     {
+        // xmin: dva istovremena upisa iste smene (npr. dva odobravanja otvorene smene) ne mogu oba da prođu.
+        builder.Property<uint>("Version").IsRowVersion();
+
         builder.Property(s => s.Note).HasMaxLength(500);
 
         builder.HasIndex(s => new { s.RestaurantId, s.StartsAt });
