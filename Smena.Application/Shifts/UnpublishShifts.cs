@@ -2,15 +2,15 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
-using Smena.Domain.Shifts;
 
 namespace Smena.Application.Shifts;
 
 /// <param name="PositionIds">Pozicije čiji se raspored povlači (npr. samo konobari); prazno znači sve pozicije.</param>
 public sealed record UnpublishShiftsCommand(DateTimeOffset From, DateTimeOffset To, IReadOnlyList<Guid>? PositionIds = null);
 
-/// <param name="SwapRequestsRemoved">Zahtevi za prepuštanje i razmenu u toku koji su obrisani zajedno sa povučenim smenama.</param>
-public sealed record UnpublishedShiftsDto(int Unpublished, int SwapRequestsRemoved = 0);
+/// <param name="SwapRequestsRemoved">Zahtevi za prepuštanje i razmenu obrisani zajedno sa povučenim smenama.</param>
+/// <param name="ClaimRequestsRemoved">Zahtevi za preuzimanje otvorenih smena obrisani zajedno sa povučenim smenama.</param>
+public sealed record UnpublishedShiftsDto(int Unpublished, int SwapRequestsRemoved = 0, int ClaimRequestsRemoved = 0);
 
 public sealed class UnpublishShiftsValidator : AbstractValidator<UnpublishShiftsCommand>
 {
@@ -31,9 +31,9 @@ public sealed class UnpublishShiftsHandler(
 {
     /// <summary>
     /// Vraća objavljene smene koje počinju u periodu [From, To) u nacrte, za zadate pozicije ili za sve.
-    /// Smene koje su već počele ostaju objavljene, jer su istorija. Zahtevi za prepuštanje i razmenu koji su u toku
-    /// (čekaju kolegu ili menadžera) i u kojima je bar jedna povučena smena brišu se zajedno sa njom; završeni
-    /// zahtevi ostaju kao istorija. Zahtevi za preuzimanje otvorene smene ostaju. Zaposleni se ne obaveštavaju.
+    /// Smene koje su već počele ostaju objavljene, jer su istorija. Svi zahtevi vezani za povučene smene brišu se
+    /// zajedno sa njima i više ne postoje, bez obzira na status: zahtevi za prepuštanje i razmenu (u kojima je bar
+    /// jedna od smena povučena) i zahtevi za preuzimanje otvorenih smena. Zaposleni se ne obaveštavaju.
     /// </summary>
     public async Task<Result<UnpublishedShiftsDto>> HandleAsync(UnpublishShiftsCommand command, CancellationToken cancellationToken)
     {
@@ -55,13 +55,16 @@ public sealed class UnpublishShiftsHandler(
             shift.Unpublish();
 
         var ids = published.Select(s => s.Id).ToList();
-        var openSwaps = await db.ShiftSwaps
-            .Where(s => (s.Status == SwapStatus.Pending || s.Status == SwapStatus.Accepted)
-                        && (ids.Contains(s.ShiftId) || (s.TargetShiftId != null && ids.Contains(s.TargetShiftId.Value))))
+        var swaps = await db.ShiftSwaps
+            .Where(s => ids.Contains(s.ShiftId) || (s.TargetShiftId != null && ids.Contains(s.TargetShiftId.Value)))
             .ToListAsync(cancellationToken);
-        db.ShiftSwaps.RemoveRange(openSwaps);
+        var claims = await db.ShiftClaims
+            .Where(c => ids.Contains(c.ShiftId))
+            .ToListAsync(cancellationToken);
+        db.ShiftSwaps.RemoveRange(swaps);
+        db.ShiftClaims.RemoveRange(claims);
 
         await db.SaveChangesAsync(cancellationToken);
-        return new UnpublishedShiftsDto(published.Count, openSwaps.Count);
+        return new UnpublishedShiftsDto(published.Count, swaps.Count, claims.Count);
     }
 }

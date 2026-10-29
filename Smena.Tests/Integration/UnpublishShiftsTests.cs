@@ -233,7 +233,7 @@ public class UnpublishShiftsTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Finished_requests_stay_as_history()
+    public async Task Finished_requests_are_deleted_too_and_the_shifts_keep_their_current_owners()
     {
         var s = await ArrangeAsync();
         var declined = await ExchangeAsync(s);
@@ -242,16 +242,17 @@ public class UnpublishShiftsTests(ApiFactory factory)
         await Act(s.A, cancelled.Id, "cancel");
         var approved = await ExchangeAsync(s);
         await Act(s.B, approved.Id, "accept");
-        await Act(s.Owner, approved.Id, "approve");
+        await Act(s.Owner, approved.Id, "approve");                                   // smene su već zamenile vlasnike
 
         var result = await ApiClient.ReadAsync<UnpublishedShiftsDto>(await Unpublish(s.Owner));
 
-        Assert.Equal(0, result.SwapRequestsRemoved);
-        var history = await AllSwapsAsync(s.Owner);
-        Assert.Equal(3, history.Count);
-        Assert.Contains(history, x => x.Status == SwapStatus.Declined);
-        Assert.Contains(history, x => x.Status == SwapStatus.Cancelled);
-        Assert.Contains(history, x => x.Status == SwapStatus.Approved);
+        Assert.Equal(3, result.SwapRequestsRemoved);
+        Assert.Empty(await AllSwapsAsync(s.Owner));
+        Assert.Empty(await SwapsOf(s.A));
+        Assert.Empty(await SwapsOf(s.B));
+        var all = await AllAsync(s.Owner);
+        Assert.Equal(s.BId, all.Single(x => x.Id == s.X.Id).EmployeeId);              // brisanje zapisa ne vraća smene
+        Assert.Equal(s.AId, all.Single(x => x.Id == s.Y.Id).EmployeeId);
     }
 
     [Fact]
@@ -269,18 +270,41 @@ public class UnpublishShiftsTests(ApiFactory factory)
     }
 
     [Fact]
-    public async Task Claims_for_open_shifts_are_not_swap_requests_and_stay()
+    public async Task Claims_for_open_shifts_are_deleted_with_the_roster_whatever_their_status()
     {
         var s = await ArrangeAsync();
+        var second = await CreateAsync(s.Owner, null, s.WaiterId, 4);
+        await s.Owner.PublishAsync(Day.AddDays(4), Day.AddDays(5));
+        var pending = await ApiClient.ReadAsync<ClaimDto>(await s.B.Http.PostAsJsonAsync(
+            $"/api/shifts/{s.O.Id}/claims", new { note = (string?)null }, ApiClient.Json));
+        var approved = await ApiClient.ReadAsync<ClaimDto>(await s.A.Http.PostAsJsonAsync(
+            $"/api/shifts/{second.Id}/claims", new { note = (string?)null }, ApiClient.Json));
+        await s.Owner.Http.PostAsync($"/api/claims/{approved.Id}/approve", null);
+
+        var result = await ApiClient.ReadAsync<UnpublishedShiftsDto>(await Unpublish(s.Owner));
+
+        Assert.Equal(2, result.ClaimRequestsRemoved);
+        Assert.Empty(await ApiClient.ReadAsync<List<ClaimDto>>(await s.B.Http.GetAsync("/api/claims/mine")));
+        Assert.Empty(await ApiClient.ReadAsync<List<ClaimDto>>(await s.Owner.Http.GetAsync("/api/claims")));
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Owner.Http.PostAsync($"/api/claims/{pending.Id}/approve", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await s.B.Http.PostAsync($"/api/claims/{pending.Id}/cancel", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Requests_about_shifts_that_stay_published_are_left_alone()
+    {
+        var s = await ArrangeAsync();
+        await ExchangeAsync(s);
         var claim = await ApiClient.ReadAsync<ClaimDto>(await s.B.Http.PostAsJsonAsync(
             $"/api/shifts/{s.O.Id}/claims", new { note = (string?)null }, ApiClient.Json));
 
-        await Unpublish(s.Owner);
+        var result = await ApiClient.ReadAsync<UnpublishedShiftsDto>(await Unpublish(s.Owner, positionIds: s.CookId));   // samo kuvarska Z
 
-        var claims = await ApiClient.ReadAsync<List<ClaimDto>>(await s.B.Http.GetAsync("/api/claims/mine"));
-        Assert.Equal(ClaimStatus.Pending, Assert.Single(claims).Status);
-        Assert.Equal(HttpStatusCode.OK, (await s.Owner.Http.PostAsync($"/api/claims/{claim.Id}/approve", null)).StatusCode);
-        Assert.Equal(s.BId, (await AllAsync(s.Owner)).Single(x => x.Id == s.O.Id).EmployeeId);
+        Assert.Equal(1, result.Unpublished);
+        Assert.Equal(0, result.SwapRequestsRemoved);
+        Assert.Equal(0, result.ClaimRequestsRemoved);
+        Assert.Single(await AllSwapsAsync(s.Owner));
+        Assert.Equal(claim.Id, Assert.Single(await ApiClient.ReadAsync<List<ClaimDto>>(await s.B.Http.GetAsync("/api/claims/mine"))).Id);
     }
 
     [Fact]
