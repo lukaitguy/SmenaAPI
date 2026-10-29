@@ -6,10 +6,13 @@ using Microsoft.Extensions.Options;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
 using Smena.Application.Swaps;
+using Smena.Domain.Employees;
+using Smena.Domain.Shifts;
 
 namespace Smena.Application.Shifts;
 
-public sealed record PublishShiftsCommand(DateTimeOffset From, DateTimeOffset To);
+/// <param name="PositionIds">Pozicije čiji se raspored objavljuje (npr. samo konobari); prazno znači sve pozicije.</param>
+public sealed record PublishShiftsCommand(DateTimeOffset From, DateTimeOffset To, IReadOnlyList<Guid>? PositionIds = null);
 
 public sealed record PublishedShiftsDto(int Published, int EmployeesNotified);
 
@@ -21,6 +24,7 @@ public sealed class PublishShiftsValidator : AbstractValidator<PublishShiftsComm
         RuleFor(x => x).Must(x => x.To - x.From <= TimeSpan.FromDays(ShiftQueries.MaxRangeDays))
             .WithName(nameof(PublishShiftsCommand.To))
             .WithMessage($"Period ne može biti duži od {ShiftQueries.MaxRangeDays} dana.");
+        RuleForEach(x => x.PositionIds).NotEqual(Guid.Empty);
     }
 }
 
@@ -31,17 +35,22 @@ public sealed class PublishShiftsHandler(
     TimeProvider time)
 {
     /// <summary>
-    /// Objavljuje sve nacrte koji počinju u periodu [From, To). Već objavljene smene se ne diraju,
-    /// pa ponovno objavljivanje istog perioda ne šalje nove mejlove.
+    /// Objavljuje nacrte koji počinju u periodu [From, To), za zadate pozicije ili za sve. Već objavljene
+    /// smene se ne diraju, pa ponovno objavljivanje istog perioda ne šalje nove mejlove.
     /// </summary>
-    public async Task<PublishedShiftsDto> HandleAsync(PublishShiftsCommand command, CancellationToken cancellationToken)
+    public async Task<Result<PublishedShiftsDto>> HandleAsync(PublishShiftsCommand command, CancellationToken cancellationToken)
     {
         await validator.ValidateAndThrowAsync(command, cancellationToken);
+
+        var positionIds = command.PositionIds?.Distinct().ToList() ?? [];
+        if (positionIds.Count > 0 && await db.Positions.CountAsync(p => positionIds.Contains(p.Id), cancellationToken) != positionIds.Count)
+            return Error.NotFound("positions.not_found", "Pozicija nije pronađena.");
 
         var from = command.From.ToUniversalTime();
         var to = command.To.ToUniversalTime();
         var drafts = await db.Shifts
-            .Where(s => s.PublishedAt == null && s.StartsAt >= from && s.StartsAt < to)
+            .Where(s => s.PublishedAt == null && s.StartsAt >= from && s.StartsAt < to
+                        && (positionIds.Count == 0 || positionIds.Contains(s.PositionId)))
             .ToListAsync(cancellationToken);
         if (drafts.Count == 0)
             return new PublishedShiftsDto(0, 0);
@@ -56,44 +65,57 @@ public sealed class PublishShiftsHandler(
     }
 }
 
-/// <summary>Jedan mejl po zaposlenom o njegovim novoobjavljenim smenama. Greške slanja idu samo u log.</summary>
+/// <summary>
+/// Jedan mejl svakom aktivnom zaposlenom koji ima neku od objavljenih pozicija: raspored za njegovu ulogu
+/// je objavljen, pa neka ga pogleda. Osoba koja objavljuje se preskače. Greške slanja idu samo u log.
+/// </summary>
 public sealed class SchedulePublishedNotifier(
     IAppDbContext db,
+    ICurrentUser currentUser,
     IIdentityService identity,
     IEmailSender emailSender,
     IOptions<AppOptions> appOptions,
     ILogger<SchedulePublishedNotifier> logger)
 {
-    public async Task<int> NotifyAsync(IReadOnlyCollection<Domain.Shifts.Shift> published, CancellationToken cancellationToken)
+    public async Task<int> NotifyAsync(IReadOnlyCollection<Shift> published, CancellationToken cancellationToken)
     {
         var sent = 0;
         try
         {
             var timeZoneId = await db.Restaurants.Select(r => r.TimeZoneId).FirstAsync(cancellationToken);
-            var byEmployee = published.Where(s => s.EmployeeId is not null).GroupBy(s => s.EmployeeId!.Value).ToList();
-            var employeeIds = byEmployee.Select(g => g.Key).ToList();
-            var userIds = await db.Employees
-                .Where(e => employeeIds.Contains(e.Id))
-                .ToDictionaryAsync(e => e.Id, e => e.UserId, cancellationToken);
-            var emails = await identity.GetEmailsAsync(userIds.Values.ToList(), cancellationToken);
+            var byPosition = published.GroupBy(s => s.PositionId).ToDictionary(g => g.Key, g => g.ToList());
+            var positionIds = byPosition.Keys.ToList();
+            var positionNames = await db.Positions
+                .Where(p => positionIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+
+            var recipients = await db.Employees
+                .Where(e => e.Status == EmployeeStatus.Active && e.Id != currentUser.EmployeeId
+                            && e.Positions.Any(p => positionIds.Contains(p.Id)))
+                .Select(e => new { e.Id, e.UserId, Positions = e.Positions.Select(p => p.Id).ToList() })
+                .ToListAsync(cancellationToken);
+            var emails = await identity.GetEmailsAsync(recipients.Select(r => r.UserId).ToList(), cancellationToken);
             var link = appOptions.Value.ScheduleLink;
 
-            foreach (var group in byEmployee)
+            foreach (var recipient in recipients)
             {
-                if (!userIds.TryGetValue(group.Key, out var userId) || !emails.TryGetValue(userId, out var to))
+                if (!emails.TryGetValue(recipient.UserId, out var to))
                     continue;
+
+                // Samo uloge ovog zaposlenog: konobar ne dobija obaveštenje o rasporedu kuvara.
+                var relevant = recipient.Positions.Where(byPosition.ContainsKey).ToList();
+                var shifts = relevant.SelectMany(p => byPosition[p]).ToList();
+                var names = string.Join(", ", relevant.Select(p => positionNames[p]).Order());
+                var range = $"{LocalTime.Format(shifts.Min(s => s.StartsAt), timeZoneId)} - {LocalTime.Format(shifts.Max(s => s.StartsAt), timeZoneId)}";
 
                 try
                 {
-                    var first = group.Min(s => s.StartsAt);
-                    var last = group.Max(s => s.StartsAt);
-                    var range = $"{LocalTime.Format(first, timeZoneId)} - {LocalTime.Format(last, timeZoneId)}";
-                    await emailSender.SendAsync(Build(to, group.Count(), range, link), cancellationToken);
+                    await emailSender.SendAsync(Build(to, names, range, link), cancellationToken);
                     sent++;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    logger.LogWarning(ex, "Obaveštenje o rasporedu zaposlenom {EmployeeId} nije poslato.", group.Key);
+                    logger.LogWarning(ex, "Obaveštenje o rasporedu zaposlenom {EmployeeId} nije poslato.", recipient.Id);
                 }
             }
         }
@@ -105,19 +127,18 @@ public sealed class SchedulePublishedNotifier(
         return sent;
     }
 
-    private static EmailMessage Build(string to, int count, string range, string link)
+    private static EmailMessage Build(string to, string positions, string range, string link)
     {
-        var shifts = count == 1 ? "1 smena" : $"{count} smena";
         var text = $"""
             Zdravo,
 
-            Objavljen je novi raspored. Imate {shifts}, od {range}.
+            Objavljen je novi raspored za: {positions} ({range}).
 
             Pogledajte raspored: {link}
             """;
         var html = $"""
             <p>Zdravo,</p>
-            <p>Objavljen je novi raspored. Imate <strong>{WebUtility.HtmlEncode(shifts)}</strong>, od {WebUtility.HtmlEncode(range)}.</p>
+            <p>Objavljen je novi raspored za: <strong>{WebUtility.HtmlEncode(positions)}</strong> ({WebUtility.HtmlEncode(range)}).</p>
             <p><a href="{WebUtility.HtmlEncode(link)}">Pogledajte raspored</a></p>
             """;
         return new EmailMessage(to, "Objavljen je novi raspored", text, html);

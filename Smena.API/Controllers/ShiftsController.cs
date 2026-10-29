@@ -10,13 +10,17 @@ namespace SmenaAPI.Controllers;
 [Route("api/shifts")]
 public sealed class ShiftsController : ControllerBase
 {
-    /// <summary>Raspored celog restorana za period (from/to, najviše 62 dana).</summary>
+    /// <summary>
+    /// Raspored celog restorana za period (from/to, najviše 62 dana), uključujući nacrte.
+    /// Može da se suzi na zaposlenog (<c>employeeId</c>) ili na ulogu (<c>positionId</c>).
+    /// </summary>
     [Authorize(Policy = Policies.Manager)]
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ShiftDto>>> List(
-        DateTimeOffset from, DateTimeOffset to, Guid? employeeId, ListShiftsHandler handler, CancellationToken cancellationToken)
+        DateTimeOffset from, DateTimeOffset to, Guid? employeeId, Guid? positionId, ListShiftsHandler handler,
+        CancellationToken cancellationToken)
     {
-        var result = await handler.HandleAsync(from, to, employeeId, cancellationToken);
+        var result = await handler.HandleAsync(from, to, employeeId, positionId, cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : this.ToProblem(result.Error!);
     }
 
@@ -76,14 +80,18 @@ public sealed class ShiftsController : ControllerBase
     }
 
     /// <summary>
-    /// Objavljuje nacrte koji počinju u periodu [from, to) (npr. jedna nedelja) i obaveštava zaposlene mejlom.
-    /// Do objavljivanja smene vidi samo menadžer.
+    /// Objavljuje nacrte koji počinju u periodu [from, to) (npr. jedna nedelja), za zadate pozicije
+    /// (<c>positionIds</c>, npr. samo konobare) ili za sve. Zaposleni tih uloga dobijaju mejl da pogledaju
+    /// raspored. Do objavljivanja smene vidi samo menadžer.
     /// </summary>
     [Authorize(Policy = Policies.Manager)]
     [HttpPost("publish")]
-    public Task<PublishedShiftsDto> Publish(
-        PublishShiftsCommand command, PublishShiftsHandler handler, CancellationToken cancellationToken) =>
-        handler.HandleAsync(command, cancellationToken);
+    public async Task<ActionResult<PublishedShiftsDto>> Publish(
+        PublishShiftsCommand command, PublishShiftsHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(command, cancellationToken);
+        return result.IsSuccess ? result.Value : this.ToProblem(result.Error!);
+    }
 
     /// <summary>Briše buduće smene serije (od <c>from</c>, podrazumevano od sada); prošle ostaju.</summary>
     [Authorize(Policy = Policies.Manager)]

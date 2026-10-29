@@ -104,12 +104,13 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | GET | `/api/employees/{id}` | Manager/Owner |
 | PUT | `/api/employees/{id}` | Manager/Owner, ime, uloga i pozicije |
 | PUT | `/api/employees/{id}/status` | Manager/Owner, aktivacija/deaktivacija |
-| GET | `/api/shifts?from=&to=&employeeId=` | Manager/Owner, raspored za period (najviše 62 dana) |
+| GET | `/api/shifts?from=&to=&employeeId=&positionId=` | Manager/Owner, raspored za period (najviše 62 dana), i nacrti; može po zaposlenom ili ulozi |
 | GET | `/api/shifts/mine?from=&to=` | objavljene smene prijavljenog zaposlenog |
 | POST | `/api/shifts` | Manager/Owner, nova smena |
 | PUT | `/api/shifts/{id}` | Manager/Owner, izmena smene |
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
-| POST | `/api/shifts/publish` | Manager/Owner, objavljuje nacrte u periodu `{ from, to }` i obaveštava zaposlene |
+| POST | `/api/shifts/publish` | Manager/Owner, objavljuje nacrte u periodu `{ from, to, positionIds? }` (po ulozi ili sve) i obaveštava zaposlene te uloge |
+| GET | `/api/schedule?from=&to=&positionId=` | objavljen raspored mojih uloga (svih kolega + otvorene smene) |
 | POST | `/api/shifts/recurring` | Manager/Owner, smene po obrascu (dani u nedelji, od-do sat, period) |
 | DELETE | `/api/shifts/series/{seriesId}?from=` | Manager/Owner, briše buduće smene serije |
 | GET | `/api/shifts/open?from=&to=` | otvorene smene koje mogu da tražim (objavljene, buduće, moje pozicije) |
@@ -161,11 +162,12 @@ Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a me
 
 ## Objavljivanje rasporeda
 
-Svaka nova smena (pojedinačna ili iz serije) je **nacrt** dok je menadžer ne objavi: vidi je samo menadžer (`publishedAt` je `null`). `POST /api/shifts/publish` sa `{ "from": ..., "to": ... }` objavljuje sve nacrte koji počinju u tom periodu (najviše 62 dana, npr. jedna nedelja).
+Svaka nova smena (pojedinačna ili iz serije) je **nacrt** dok je menadžer ne objavi: vidi je samo menadžer (`publishedAt` je `null`). `POST /api/shifts/publish` sa `{ "from": ..., "to": ..., "positionIds": [...] }` objavljuje sve nacrte koji počinju u tom periodu (najviše 62 dana, npr. jedna nedelja).
 
-- Zaposleni vide samo objavljene smene (`/api/shifts/mine`) i samo za njih mogu da traže prepuštanje.
-- Svaki zaposleni dobija jedan mejl sa brojem svojih novih smena. Ponovno objavljivanje istog perioda ne šalje ništa novo.
-- Izmena već objavljene smene ostaje objavljena i vidi se odmah; zaposleni za to nisu posebno obavešteni.
+- **Raspored se pravi i objavljuje po ulogama** (konobari, kuvari, hostese): `positionIds` ograničava objavu na izabrane pozicije, a bez njega se objavljuju sve. Uloge se objavljuju nezavisno, svaka kad je spremna.
+- **Zaposleni vide raspored svoje uloge:** `GET /api/schedule` vraća objavljene smene svih kolega na njihovim pozicijama, zajedno sa otvorenim smenama tih pozicija. Ko ima više uloga vidi sve, a `positionId` suzuje na jednu. Raspored drugih uloga i nacrti se ne vide. `GET /api/shifts/mine` ostaje za sopstvene smene.
+- **Jedno obaveštenje:** svaki aktivni zaposleni koji ima objavljenu ulogu dobija mejl da je raspored objavljen i da ga pogleda (uloga, period, link na `{App:FrontendUrl}/schedule`), čak i ako tu nedelju nema smenu. Osoba koja objavljuje ne dobija mejl, a ponovno objavljivanje istog perioda ne šalje ništa. Nema posebnih obaveštenja o izmeni objavljene smene ni o novim otvorenim smenama.
+- Zaposleni mogu da traže prepuštanje samo za objavljene smene.
 - Smene koje su postojale pre uvođenja objavljivanja važe kao objavljene.
 
 ## Ponavljajuće smene
