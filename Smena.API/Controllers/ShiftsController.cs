@@ -93,6 +93,19 @@ public sealed class ShiftsController : ControllerBase
         return result.IsSuccess ? result.Value : this.ToProblem(result.Error!);
     }
 
+    /// <summary>
+    /// Vraća objavljene smene koje još nisu počele u nacrte (period [from, to), opciono samo za <c>positionIds</c>).
+    /// Zaposleni ih više ne vide i ne dobijaju obaveštenje; otvoreni zahtevi ostaju.
+    /// </summary>
+    [Authorize(Policy = Policies.Manager)]
+    [HttpPost("unpublish")]
+    public async Task<ActionResult<UnpublishedShiftsDto>> Unpublish(
+        UnpublishShiftsCommand command, UnpublishShiftsHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(command, cancellationToken);
+        return result.IsSuccess ? result.Value : this.ToProblem(result.Error!);
+    }
+
     /// <summary>Briše buduće smene serije (od <c>from</c>, podrazumevano od sada); prošle ostaju.</summary>
     [Authorize(Policy = Policies.Manager)]
     [HttpDelete("series/{seriesId:guid}")]

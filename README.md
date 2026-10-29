@@ -110,6 +110,7 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | PUT | `/api/shifts/{id}` | Manager/Owner, izmena smene |
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
 | POST | `/api/shifts/publish` | Manager/Owner, objavljuje nacrte u periodu `{ from, to, positionIds? }` (po ulozi ili sve) i obaveštava zaposlene te uloge |
+| POST | `/api/shifts/unpublish` | Manager/Owner, vraća buduće objavljene smene u nacrt `{ from, to, positionIds? }` |
 | GET | `/api/schedule?from=&to=&positionId=` | objavljen raspored mojih uloga (svih kolega + otvorene smene) |
 | POST | `/api/shifts/recurring` | Manager/Owner, smene po obrascu (dani u nedelji, od-do sat, period) |
 | DELETE | `/api/shifts/series/{seriesId}?from=` | Manager/Owner, briše buduće smene serije |
@@ -167,6 +168,8 @@ Svaka nova smena (pojedinačna ili iz serije) je **nacrt** dok je menadžer ne o
 - **Raspored se pravi i objavljuje po ulogama** (konobari, kuvari, hostese): `positionIds` ograničava objavu na izabrane pozicije, a bez njega se objavljuju sve. Uloge se objavljuju nezavisno, svaka kad je spremna.
 - **Zaposleni vide raspored svoje uloge:** `GET /api/schedule` vraća objavljene smene svih kolega na njihovim pozicijama, zajedno sa otvorenim smenama tih pozicija. Ko ima više uloga vidi sve, a `positionId` suzuje na jednu. Raspored drugih uloga i nacrti se ne vide. `GET /api/shifts/mine` ostaje za sopstvene smene.
 - **Jedno obaveštenje:** svaki aktivni zaposleni koji ima objavljenu ulogu dobija mejl da je raspored objavljen i da ga pogleda (uloga, period, link na `{App:FrontendUrl}/schedule`), čak i ako tu nedelju nema smenu. Osoba koja objavljuje ne dobija mejl, a ponovno objavljivanje istog perioda ne šalje ništa. Nema posebnih obaveštenja o izmeni objavljene smene ni o novim otvorenim smenama.
+- **Povlačenje objave:** `POST /api/shifts/unpublish` (isti oblik zahteva kao objava) vraća objavljene smene u nacrt, pa ih zaposleni više ne vide. Povlače se samo smene koje još nisu počele, jer su prošle istorija. Povlačenje ne šalje mejl, a ponovna objava šalje.
+- **Zahtevi za zamenu se brišu zajedno sa povučenim rasporedom:** svaki zahtev za prepuštanje ili razmenu koji je u toku (čeka kolegu ili menadžera) i u kome je bar jedna od smena povučena se briše, pa ga više niko ne vidi i ne može da odgovori. Odgovor vraća `swapRequestsRemoved`. Završeni zahtevi (odobreni, odbijeni, otkazani) ostaju kao istorija. Zahtevi za preuzimanje otvorene smene ostaju. Posle ponovne objave obrisani zahtevi se ne vraćaju, ali se mogu podneti iznova.
 - Zaposleni mogu da traže prepuštanje samo za objavljene smene.
 - Smene koje su postojale pre uvođenja objavljivanja važe kao objavljene.
 

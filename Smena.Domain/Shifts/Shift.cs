@@ -45,6 +45,9 @@ public class Shift : IRestaurantScoped
 
     public void Publish(DateTimeOffset now) => PublishedAt ??= now;
 
+    /// <summary>Vraća smenu u nacrt: zaposleni je više ne vide, a zahtevi vezani za nju ostaju.</summary>
+    public void Unpublish() => PublishedAt = null;
+
     public void Reschedule(Guid? employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note)
     {
         EmployeeId = employeeId;
