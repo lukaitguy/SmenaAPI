@@ -9,13 +9,25 @@ namespace Smena.Application.Shifts;
 /// <summary>Da li zaposleni sme i može da radi smenu. Isto pravilo važi za dodelu, prepuštanje i preuzimanje.</summary>
 internal static class AssignmentRules
 {
-    public static async Task<Error?> CheckAsync(
+    public static Task<Error?> CheckAsync(
         IAppDbContext db,
         Guid employeeId,
         Guid positionId,
         DateTimeOffset startsAt,
         DateTimeOffset endsAt,
         Guid? ignoreShiftId,
+        CancellationToken cancellationToken) =>
+        CheckAsync(db, employeeId, positionId, startsAt, endsAt,
+            ignoreShiftId is { } id ? [id] : [], cancellationToken);
+
+    /// <param name="ignoreShiftIds">Smene koje se ne računaju kao preklapanje, jer zaposleni upravo prestaje da ih radi (npr. pri razmeni).</param>
+    public static async Task<Error?> CheckAsync(
+        IAppDbContext db,
+        Guid employeeId,
+        Guid positionId,
+        DateTimeOffset startsAt,
+        DateTimeOffset endsAt,
+        IReadOnlyCollection<Guid> ignoreShiftIds,
         CancellationToken cancellationToken)
     {
         var employee = await db.Employees
@@ -29,7 +41,7 @@ internal static class AssignmentRules
             return Error.Conflict("shifts.position_not_assigned", "Zaposleni nema ovu poziciju.");
 
         var overlaps = await db.Shifts.AnyAsync(
-            s => s.EmployeeId == employeeId && s.Id != ignoreShiftId && s.StartsAt < endsAt && s.EndsAt > startsAt,
+            s => s.EmployeeId == employeeId && !ignoreShiftIds.Contains(s.Id) && s.StartsAt < endsAt && s.EndsAt > startsAt,
             cancellationToken);
         if (overlaps)
             return Error.Conflict("shifts.overlap", "Zaposleni već ima smenu u tom periodu.");

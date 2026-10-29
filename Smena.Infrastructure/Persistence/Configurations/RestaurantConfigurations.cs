@@ -140,6 +140,7 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
 
         builder.HasIndex(s => new { s.RestaurantId, s.Status });
         builder.HasIndex(s => s.ShiftId);
+        builder.HasOne<Shift>().WithMany().HasForeignKey(s => s.TargetShiftId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(s => s.RequesterEmployeeId);
         builder.HasIndex(s => s.TargetEmployeeId);
         builder.HasOne<Restaurant>().WithMany().HasForeignKey(s => s.RestaurantId);
@@ -156,6 +157,12 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
             .HasDatabaseName("ux_shift_swaps_open_per_shift")
             .IsUnique()
             .HasFilter("status IN ('Pending', 'Accepted')");
+
+        // Kolegina smena može da bude cilj najviše jedne otvorene razmene.
+        builder.HasIndex(s => s.TargetShiftId)
+            .HasDatabaseName("ux_shift_swaps_open_per_target_shift")
+            .IsUnique()
+            .HasFilter("status IN ('Pending', 'Accepted') AND target_shift_id IS NOT NULL");
     }
 }
 

@@ -20,11 +20,12 @@ public sealed class RespondToSwapHandler(IAppDbContext db, ICurrentUser currentU
             return SwapRules.InvalidState(swap.Status);
 
         var shift = await db.Shifts.FirstOrDefaultAsync(s => s.Id == swap.ShiftId, cancellationToken);
-        if (shift is null || shift.StartsAt <= time.GetUtcNow())
+        if (shift is null)
             return SwapRules.ShiftStarted();
 
-        // Kolega je u međuvremenu mogao da dobije drugu smenu u istom terminu.
-        if (await SwapRules.CheckTargetCanTakeAsync(db, shift, swap.TargetEmployeeId, cancellationToken) is { } error)
+        // Od podnošenja zahteva smene su mogle da se promene ili neko da postane zauzet.
+        var (error, _) = await SwapRules.CheckExecutableAsync(db, swap, shift, time.GetUtcNow(), cancellationToken);
+        if (error is not null)
             return error;
 
         swap.Accept(time.GetUtcNow());

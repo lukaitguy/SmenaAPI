@@ -124,7 +124,7 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | GET | `/api/dayoffs?status=&from=&to=` | Manager/Owner, svi zahtevi (npr. `status=Approved` pri pravljenju rasporeda) |
 | POST | `/api/dayoffs/{id}/cancel` | podnosilac, i pending i odobren |
 | POST | `/api/dayoffs/{id}/approve`, `/reject` | Manager/Owner; `reject` odbija ili povlači odobren dan |
-| POST | `/api/swaps` | zaposleni traži da svoju buduću smenu prepusti kolegi (`shiftId`, `targetEmployeeId`, `note`) |
+| POST | `/api/swaps` | prepuštanje (`shiftId`, `targetEmployeeId`) ili razmena smena (`shiftId`, `targetShiftId`), uz `note` |
 | GET | `/api/swaps/mine?status=` | zahtevi u kojima učestvujem (kao podnosilac ili kolega) |
 | GET | `/api/swaps?status=` | Manager/Owner, svi zahtevi u restoranu |
 | POST | `/api/swaps/{id}/accept`, `/decline` | kolega kome je smena ponuđena |
@@ -221,14 +221,14 @@ Kad nešto čeka odluku, mejl dobijaju svi aktivni menadžeri i vlasnik restoran
 
 Mejl se šalje odmah, po jedan po događaju, a neuspelo slanje ne ruši zahtev. Link u mejlu vodi na `{App:FrontendUrl}/requests`.
 
-## Prepuštanje smena
+## Prepuštanje i razmena smena
 
-Zaposleni A svoju buduću smenu nudi kolegi B. B prihvata ili odbija, a menadžer odobrava ili odbija prihvaćene zahteve. Smena menja vlasnika tek pri odobravanju.
+Zaposleni A može da svoju buduću, objavljenu smenu **prepusti** kolegi B (`shiftId` + `targetEmployeeId`) ili da je **zameni** za B-ovu (`shiftId` + `targetShiftId`; B se izvodi iz te smene). B prihvata ili odbija, a menadžer odobrava ili odbija prihvaćene zahteve. Smene menjaju vlasnika tek pri odobravanju, a kod razmene obe odjednom.
 
-- Kolega mora biti aktivan, imati poziciju smene i biti slobodan u tom terminu. To se proverava pri zahtevu, pri prihvatanju i ponovo pri odobravanju.
-- Za jednu smenu može postojati samo jedan otvoren zahtev (`Pending` ili `Accepted`).
-- Mejl dobija kolega kad stigne zahtev, a oba zaposlena kad menadžer odluči.
-- Nije prava razmena (smena za smenu), samo prepuštanje.
+- Svako mora da bude aktivan, da ima poziciju smene koju dobija i da bude slobodan u tom terminu (i da nema odobren slobodan dan). Smena koju daje ne računa se kao preklapanje, pa je razmena moguća i kad se dve smene vremenski dodiruju. Zato se konobar i kuvar mogu zameniti samo ako obojica imaju obe pozicije.
+- Provera se ponavlja pri prihvatanju i pri odobravanju. Ako je neka od smena u međuvremenu dodeljena drugom, počela ili je neko postao zauzet, odobravanje vraća 409.
+- Smena može da bude u najviše jednom otvorenom zahtevu, kao moja ili kao kolegina. Otvorena smena (bez zaposlenog) ne može da se menja, nju zaposleni traži.
+- Kolega dobija mejl sa predlogom, menadžeri kad kolega prihvati, a oba zaposlena kad menadžer odluči. Brisanje bilo koje od smena briše i zahtev.
 
 ## Uloge
 

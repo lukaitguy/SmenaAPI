@@ -557,6 +557,10 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("target_employee_id");
 
+                    b.Property<Guid?>("TargetShiftId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_shift_id");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -583,6 +587,11 @@ namespace Smena.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TargetEmployeeId")
                         .HasDatabaseName("ix_shift_swaps_target_employee_id");
+
+                    b.HasIndex("TargetShiftId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_shift_swaps_open_per_target_shift")
+                        .HasFilter("status IN ('Pending', 'Accepted') AND target_shift_id IS NOT NULL");
 
                     b.HasIndex("RestaurantId", "Status")
                         .HasDatabaseName("ix_shift_swaps_restaurant_id_status");
@@ -937,6 +946,12 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_shift_swaps_employees_target_employee_id");
+
+                    b.HasOne("Smena.Domain.Shifts.Shift", null)
+                        .WithMany()
+                        .HasForeignKey("TargetShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_shift_swaps_shifts_target_shift_id");
                 });
 
             modelBuilder.Entity("Smena.Infrastructure.Identity.RefreshToken", b =>

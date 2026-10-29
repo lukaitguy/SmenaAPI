@@ -53,6 +53,17 @@ public sealed class ManagerNotifier(
             var requester = await NameAsync(swap.RequesterEmployeeId, cancellationToken);
             var target = await NameAsync(swap.TargetEmployeeId, cancellationToken);
             var (position, when) = await ShiftInfoAsync(swap.ShiftId, cancellationToken);
+            if (swap.TargetShiftId is { } receivedId)
+            {
+                var (otherPosition, otherWhen) = await ShiftInfoAsync(receivedId, cancellationToken);
+                await SendToManagersAsync(
+                    swap.TargetEmployeeId,
+                    "Zamena smena čeka odluku",
+                    $"{requester} i {target} menjaju smene: {requester} daje ({position}) {when}, a dobija ({otherPosition}) {otherWhen}. Kolega je prihvatio, čeka vašu odluku.",
+                    cancellationToken);
+                return;
+            }
+
             await SendToManagersAsync(
                 swap.TargetEmployeeId,
                 "Zamena smene čeka odluku",

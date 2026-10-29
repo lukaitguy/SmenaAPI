@@ -16,7 +16,11 @@ public sealed record SwapDto(
     string TargetName,
     string? Note,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    Guid? TargetShiftId,
+    DateTimeOffset? TargetShiftStartsAt,
+    DateTimeOffset? TargetShiftEndsAt,
+    string? TargetPositionName);
 
 internal static class SwapQueries
 {
@@ -28,6 +32,7 @@ internal static class SwapQueries
         join p in db.Positions on sh.PositionId equals p.Id
         join r in db.Employees on s.RequesterEmployeeId equals r.Id
         join t in db.Employees on s.TargetEmployeeId equals t.Id
+        from ts in db.Shifts.Where(x => x.Id == s.TargetShiftId).DefaultIfEmpty()
         orderby s.CreatedAt descending
         select new SwapDto(
             s.Id,
@@ -42,7 +47,11 @@ internal static class SwapQueries
             t.FirstName + " " + t.LastName,
             s.Note,
             s.CreatedAt,
-            s.UpdatedAt);
+            s.UpdatedAt,
+            s.TargetShiftId,
+            ts == null ? null : ts.StartsAt,
+            ts == null ? null : ts.EndsAt,
+            ts == null ? null : db.Positions.Where(x => x.Id == ts.PositionId).Select(x => x.Name).FirstOrDefault());
 
     public static Task<SwapDto> LoadDtoAsync(this IAppDbContext db, Guid swapId, CancellationToken cancellationToken) =>
         Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstAsync(

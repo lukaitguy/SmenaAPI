@@ -22,16 +22,16 @@ public sealed class DecideSwapHandler(
 
         var now = time.GetUtcNow();
         var shift = await db.Shifts.FirstOrDefaultAsync(s => s.Id == swap.ShiftId, cancellationToken);
-        if (shift is null || shift.StartsAt <= now)
+        if (shift is null)
             return SwapRules.ShiftStarted();
 
-        // Menadžer je mogao u međuvremenu da izmeni smenu ili raspored kolege, pa se sve proverava ponovo.
-        if (shift.EmployeeId != swap.RequesterEmployeeId)
-            return Error.Conflict("swaps.shift_changed", "Smena je u međuvremenu dodeljena drugom zaposlenom.");
-        if (await SwapRules.CheckTargetCanTakeAsync(db, shift, swap.TargetEmployeeId, cancellationToken) is { } error)
+        // Menadžer je mogao u međuvremenu da izmeni smene ili raspored kolege, pa se sve proverava ponovo.
+        var (error, received) = await SwapRules.CheckExecutableAsync(db, swap, shift, now, cancellationToken);
+        if (error is not null)
             return error;
 
         shift.Reschedule(swap.TargetEmployeeId, shift.PositionId, shift.StartsAt, shift.EndsAt, shift.Note);
+        received?.Reschedule(swap.RequesterEmployeeId, received.PositionId, received.StartsAt, received.EndsAt, received.Note);
         swap.Approve(currentUser.EmployeeId!.Value, now);
         await db.SaveChangesAsync(cancellationToken);
 
