@@ -10,6 +10,8 @@ public sealed class AppOptions
     public string InvitationLink(string token) =>
         $"{FrontendUrl.TrimEnd('/')}/join#{Uri.EscapeDataString(token)}";
 
+    public string RequestsLink => $"{FrontendUrl.TrimEnd('/')}/requests";
+
     public string ScheduleLink => $"{FrontendUrl.TrimEnd('/')}/schedule";
 
     public string SwapsLink => $"{FrontendUrl.TrimEnd('/')}/swaps";

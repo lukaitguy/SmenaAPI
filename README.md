@@ -209,6 +209,16 @@ Zaposleni traži slobodan dan za jedan datum (`POST /api/dayoffs`), a menadžer 
 - Menadžer može da povuče odobren dan (`reject`), a zaposleni da ga otkaže (`cancel`); dan se tada oslobađa.
 - Zaposleni dobija mejl kad menadžer odobri ili odbije zahtev. Menadžeri se ne obaveštavaju o novim zahtevima, vide ih u listi.
 
+## Obaveštenja menadžerima
+
+Kad nešto čeka odluku, mejl dobijaju svi aktivni menadžeri i vlasnik restorana (osim osobe koja je sama podnela zahtev):
+
+- novi zahtev za slobodan dan,
+- novi zahtev za preuzimanje otvorene smene,
+- prepuštanje smene, tek kad je kolega prihvatio (dok kolega ne odgovori menadžer nema šta da odluči).
+
+Mejl se šalje odmah, po jedan po događaju, a neuspelo slanje ne ruši zahtev. Link u mejlu vodi na `{App:FrontendUrl}/requests`.
+
 ## Prepuštanje smena
 
 Zaposleni A svoju buduću smenu nudi kolegi B. B prihvata ili odbija, a menadžer odobrava ili odbija prihvaćene zahteve. Smena menja vlasnika tek pri odobravanju.

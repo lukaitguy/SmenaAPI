@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
+using Smena.Application.Notifications;
 using Smena.Application.Shifts;
 using Smena.Domain.Shifts;
 
@@ -21,6 +22,7 @@ public sealed class CreateClaimHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
     IValidator<CreateClaimCommand> validator,
+    ManagerNotifier managerNotifier,
     TimeProvider time)
 {
     public async Task<Result<ClaimDto>> HandleAsync(Guid shiftId, CreateClaimCommand command, CancellationToken cancellationToken)
@@ -57,6 +59,7 @@ public sealed class CreateClaimHandler(
             return Error.Conflict("claims.already_requested", "Već ste tražili ovu smenu.");
         }
 
+        await managerNotifier.ClaimRequestedAsync(claim, cancellationToken);
         return await db.LoadDtoAsync(claim.Id, cancellationToken);
     }
 }

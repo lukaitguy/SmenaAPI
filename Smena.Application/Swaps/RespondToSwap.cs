@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
+using Smena.Application.Notifications;
 using Smena.Domain.Shifts;
 
 namespace Smena.Application.Swaps;
 
 /// <summary>Radnje samih zaposlenih: kolega prihvata ili odbija, a onaj ko traži može da otkaže.</summary>
-public sealed class RespondToSwapHandler(IAppDbContext db, ICurrentUser currentUser, TimeProvider time)
+public sealed class RespondToSwapHandler(IAppDbContext db, ICurrentUser currentUser, ManagerNotifier managerNotifier, TimeProvider time)
 {
     public async Task<Result<SwapDto>> AcceptAsync(Guid swapId, CancellationToken cancellationToken)
     {
@@ -28,6 +29,8 @@ public sealed class RespondToSwapHandler(IAppDbContext db, ICurrentUser currentU
 
         swap.Accept(time.GetUtcNow());
         await db.SaveChangesAsync(cancellationToken);
+
+        await managerNotifier.SwapAwaitingDecisionAsync(swap, cancellationToken);
         return await db.LoadDtoAsync(swap.Id, cancellationToken);
     }
 

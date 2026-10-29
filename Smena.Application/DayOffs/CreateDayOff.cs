@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Smena.Application.Abstractions;
 using Smena.Application.Common;
+using Smena.Application.Notifications;
 using Smena.Domain.DayOffs;
 
 namespace Smena.Application.DayOffs;
@@ -21,6 +22,7 @@ public sealed class CreateDayOffHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
     IValidator<CreateDayOffCommand> validator,
+    ManagerNotifier managerNotifier,
     TimeProvider time)
 {
     public async Task<Result<DayOffDto>> HandleAsync(CreateDayOffCommand command, CancellationToken cancellationToken)
@@ -53,6 +55,7 @@ public sealed class CreateDayOffHandler(
             return Error.Conflict("dayoffs.already_requested", "Već ste tražili slobodan dan za taj datum.");
         }
 
+        await managerNotifier.DayOffRequestedAsync(request, cancellationToken);
         return await db.LoadDtoAsync(request.Id, cancellationToken);
     }
 }
