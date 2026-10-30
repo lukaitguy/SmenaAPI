@@ -14,11 +14,12 @@ public class Shift : IRestaurantScoped
 
     public Shift(
         Guid restaurantId, Guid? employeeId, Guid positionId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? note,
-        Guid? seriesId = null)
+        Guid? seriesId = null, Guid? templateId = null)
     {
         Id = Guid.CreateVersion7();
         RestaurantId = restaurantId;
         SeriesId = seriesId;
+        TemplateId = templateId;
         Reschedule(employeeId, positionId, startsAt, endsAt, note);
     }
 
@@ -38,12 +39,18 @@ public class Shift : IRestaurantScoped
     /// <summary>Isti id imaju sve smene nastale jednim ponavljajućim rasporedom; null za pojedinačne smene.</summary>
     public Guid? SeriesId { get; private set; }
 
+    /// <summary>Šablon (npr. "I") po kome je smena napravljena; null je smena sa proizvoljnim vremenom.</summary>
+    public Guid? TemplateId { get; private set; }
+
     /// <summary>Nova smena je nacrt (vidi je samo menadžer) dok je ne objavi; null znači nacrt.</summary>
     public DateTimeOffset? PublishedAt { get; private set; }
 
     public bool IsPublished => PublishedAt is not null;
 
     public void Publish(DateTimeOffset now) => PublishedAt ??= now;
+
+    /// <summary>Postavlja šablon po kome je smena (null za proizvoljno vreme). Vreme ostaje kakvo jeste.</summary>
+    public void UseTemplate(Guid? templateId) => TemplateId = templateId;
 
     /// <summary>Vraća smenu u nacrt: zaposleni je više ne vide, a zahtevi vezani za nju ostaju.</summary>
     public void Unpublish() => PublishedAt = null;

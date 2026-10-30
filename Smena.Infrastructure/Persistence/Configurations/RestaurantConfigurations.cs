@@ -166,6 +166,22 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
     }
 }
 
+internal sealed class ShiftTemplateConfiguration : IEntityTypeConfiguration<ShiftTemplate>
+{
+    public void Configure(EntityTypeBuilder<ShiftTemplate> builder)
+    {
+        builder.Property(t => t.Name).HasMaxLength(ShiftTemplate.MaxNameLength);
+        builder.Property(t => t.StartTime).HasColumnType("time");
+        builder.Property(t => t.EndTime).HasColumnType("time");
+        builder.Ignore(t => t.EndsNextDay);
+        builder.Ignore(t => t.Duration);
+
+        builder.HasIndex(t => new { t.RestaurantId, t.PositionId, t.Name }).IsUnique();
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(t => t.RestaurantId);
+        builder.HasOne<Position>().WithMany().HasForeignKey(t => t.PositionId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
 {
     public void Configure(EntityTypeBuilder<Shift> builder)
@@ -179,6 +195,7 @@ internal sealed class ShiftConfiguration : IEntityTypeConfiguration<Shift>
         builder.HasIndex(s => new { s.EmployeeId, s.StartsAt });
         builder.HasIndex(s => s.SeriesId);
         builder.HasIndex(s => new { s.EmployeeId, s.PublishedAt });
+        builder.HasOne<ShiftTemplate>().WithMany().HasForeignKey(s => s.TemplateId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne<Restaurant>().WithMany().HasForeignKey(s => s.RestaurantId);
         builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.EmployeeId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Position>().WithMany().HasForeignKey(s => s.PositionId).OnDelete(DeleteBehavior.Restrict);

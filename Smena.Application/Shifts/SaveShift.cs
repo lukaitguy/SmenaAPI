@@ -8,12 +8,14 @@ using Smena.Domain.Shifts;
 namespace Smena.Application.Shifts;
 
 /// <param name="EmployeeId">Zaposleni kome se dodeljuje smena; izostavljen znači otvorena smena.</param>
+/// <param name="TemplateId">Šablon smene (npr. "I"); vreme mora da mu odgovara. Izostavljeno je proizvoljno vreme (Od-Do).</param>
 public sealed record SaveShiftCommand(
     Guid? EmployeeId,
     Guid PositionId,
     DateTimeOffset StartsAt,
     DateTimeOffset EndsAt,
-    string? Note);
+    string? Note,
+    Guid? TemplateId = null);
 
 public sealed class SaveShiftValidator : AbstractValidator<SaveShiftCommand>
 {
@@ -21,6 +23,7 @@ public sealed class SaveShiftValidator : AbstractValidator<SaveShiftCommand>
     {
         RuleFor(x => x.EmployeeId).NotEqual(Guid.Empty);
         RuleFor(x => x.PositionId).NotEmpty();
+        RuleFor(x => x.TemplateId).NotEqual(Guid.Empty);
         RuleFor(x => x.EndsAt).GreaterThan(x => x.StartsAt)
             .WithMessage("Kraj smene mora biti posle početka.");
         RuleFor(x => x).Must(x => x.EndsAt - x.StartsAt <= Shift.MaxDuration)
@@ -57,6 +60,13 @@ public sealed class SaveShiftHandler(
         var startsAt = command.StartsAt.ToUniversalTime();
         var endsAt = command.EndsAt.ToUniversalTime();
 
+        if (command.TemplateId is { } templateId)
+        {
+            var (_, templateError) = await TemplateRules.ForShiftAsync(db, templateId, command.PositionId, startsAt, endsAt, cancellationToken);
+            if (templateError is not null)
+                return templateError;
+        }
+
         if (command.EmployeeId is { } employeeId)
         {
             if (await AssignmentRules.CheckAsync(db, employeeId, command.PositionId, startsAt, endsAt, shiftId, cancellationToken) is { } error)
@@ -70,13 +80,14 @@ public sealed class SaveShiftHandler(
         IReadOnlyCollection<ShiftClaim> resolvedClaims = [];
         if (shift is null)
         {
-            shift = new Shift(currentUser.RestaurantId!.Value, command.EmployeeId, command.PositionId, startsAt, endsAt, command.Note);
+            shift = new Shift(currentUser.RestaurantId!.Value, command.EmployeeId, command.PositionId, startsAt, endsAt, command.Note, templateId: command.TemplateId);
             db.Shifts.Add(shift);
         }
         else
         {
             var wasOpen = shift.IsOpen;
             shift.Reschedule(command.EmployeeId, command.PositionId, startsAt, endsAt, command.Note);
+            shift.UseTemplate(command.TemplateId);
 
             // Menadžer je otvorenu smenu dodelio direktno: zahtevi za nju se zatvaraju.
             if (wasOpen && command.EmployeeId is not null)

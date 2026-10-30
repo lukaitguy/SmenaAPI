@@ -31,6 +31,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<ShiftSwap> ShiftSwaps => Set<ShiftSwap>();
     public DbSet<ShiftClaim> ShiftClaims => Set<ShiftClaim>();
     public DbSet<DayOffRequest> DayOffRequests => Set<DayOffRequest>();
+    public DbSet<ShiftTemplate> ShiftTemplates => Set<ShiftTemplate>();
 
     /// <summary>Ključevi za DataProtection (npr. tokeni za reset lozinke); u bazi da prežive restart i više instanci.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();

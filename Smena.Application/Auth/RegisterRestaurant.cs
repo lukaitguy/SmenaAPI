@@ -3,6 +3,7 @@ using Smena.Application.Abstractions;
 using Smena.Application.Common;
 using Smena.Domain.Employees;
 using Smena.Domain.Restaurants;
+using Smena.Domain.Shifts;
 
 namespace Smena.Application.Auth;
 
@@ -57,7 +58,10 @@ public sealed class RegisterRestaurantHandler(
             command.TimeZoneId ?? Restaurant.DefaultTimeZoneId,
             time.GetUtcNow());
         db.Restaurants.Add(restaurant);
-        db.Positions.AddRange(Position.Defaults.Select(name => new Position(restaurant.Id, name)));
+        var positions = Position.Defaults.Select(name => new Position(restaurant.Id, name)).ToList();
+        db.Positions.AddRange(positions);
+        db.ShiftTemplates.AddRange(ShiftTemplate.Defaults.Select(d => new ShiftTemplate(
+            restaurant.Id, positions.Single(p => p.Name == d.Position).Id, d.Name, d.Start, d.End)));
 
         var owner = new Employee(
             restaurant.Id, user.Value, command.FirstName.Trim(), command.LastName.Trim(), EmployeeRole.Owner);

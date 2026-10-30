@@ -106,6 +106,10 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 | PUT | `/api/employees/{id}/status` | Manager/Owner, aktivacija/deaktivacija |
 | GET | `/api/shifts?from=&to=&employeeId=&positionId=` | Manager/Owner, raspored za period (najviše 62 dana), i nacrti; može po zaposlenom ili ulozi |
 | GET | `/api/shifts/mine?from=&to=` | objavljene smene prijavljenog zaposlenog |
+| GET | `/api/shift-templates` | unapred definisane smene po pozicijama (čitaju svi) |
+| POST | `/api/shift-templates` | Manager/Owner, novi šablon `{ positionId, name, startTime, endTime }` |
+| PUT | `/api/shift-templates/{id}` | Manager/Owner, izmena šablona (važi za ubuduće) |
+| DELETE | `/api/shift-templates/{id}` | Manager/Owner, brisanje šablona (smene ostaju, bez oznake) |
 | POST | `/api/shifts` | Manager/Owner, nova smena |
 | PUT | `/api/shifts/{id}` | Manager/Owner, izmena smene |
 | DELETE | `/api/shifts/{id}` | Manager/Owner, brisanje smene |
@@ -160,6 +164,16 @@ Brojači su u memoriji instance, pa sa više instanci API-ja kvota važi po inst
 Pozivnice se šalju preko SMTP-a (MailKit), pa radi sa bilo kojim servisom koji nudi SMTP (Resend, SendGrid, Gmail...). U produkciji lozinku zadaj kroz `Email__Password`. Lokalno Compose pokreće Mailpit, koji hvata sve mejlove umesto da ih šalje.
 
 Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
+
+## Šabloni smena
+
+Smene se obično prave iz **šablona**: unapred definisanih smena po poziciji, koje se u rasporedu prikazuju kao "I" i "II". Novi restoran dobija podrazumevane (konobar I 08:00-16:00 i II 16:00-00:00, kuvar I 07:00-15:00 i II 15:00-23:00, hostesa samo II 16:00-00:00; šanker nema šablone), a restorani koji su već postojali dobijaju iste migracijom. Vreme šablona je lokalno vreme restorana, a kraj pre ili jednak početku znači da se smena završava sutradan.
+
+- `POST /api/shifts` i `POST /api/shifts/recurring` primaju opcioni `templateId`. Vreme smene mora da odgovara šablonu (na minut, po satu restorana) i šablon mora da pripada istoj poziciji, inače je 400. Oznaka u rasporedu tako uvek govori istinu.
+- Bez `templateId` smena je **proizvoljna** ("Od-Do"): npr. neko dolazi vanredno ili je smena drugačija. Odgovor tada ima `templateId: null`.
+- Izmena smene (`PUT`) može da pređe sa šablona na proizvoljno vreme i obrnuto. Promena zaposlenog (zamena, preuzimanje) ne dira oznaku.
+- Izmena šablona važi za ubuduće: već napravljene smene zadržavaju svoje vreme i oznaku. Brisanje šablona ostavlja smene, samo bez oznake.
+- Šabloni se brišu zajedno sa pozicijom.
 
 ## Objavljivanje rasporeda
 

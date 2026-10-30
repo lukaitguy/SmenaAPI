@@ -19,6 +19,7 @@ public enum ConflictPolicy
 }
 
 /// <param name="EmployeeId">Izostavljen znači da se prave otvorene smene.</param>
+/// <param name="TemplateId">Šablon smene (npr. "I"); StartTime i EndTime moraju da mu odgovaraju.</param>
 public sealed record CreateRecurringShiftsCommand(
     Guid? EmployeeId,
     Guid PositionId,
@@ -28,7 +29,8 @@ public sealed record CreateRecurringShiftsCommand(
     TimeOnly StartTime,
     TimeOnly EndTime,
     string? Note,
-    ConflictPolicy OnConflict = ConflictPolicy.Fail);
+    ConflictPolicy OnConflict = ConflictPolicy.Fail,
+    Guid? TemplateId = null);
 
 public sealed record RecurringShiftsResultDto(
     Guid SeriesId,
@@ -44,6 +46,7 @@ public sealed class CreateRecurringShiftsValidator : AbstractValidator<CreateRec
     {
         RuleFor(x => x.EmployeeId).NotEqual(Guid.Empty);
         RuleFor(x => x.PositionId).NotEmpty();
+        RuleFor(x => x.TemplateId).NotEqual(Guid.Empty);
         RuleFor(x => x.DaysOfWeek).NotEmpty().WithMessage("Izaberite bar jedan dan u nedelji.");
         RuleForEach(x => x.DaysOfWeek).IsInEnum();
         RuleFor(x => x.UntilDate).GreaterThanOrEqualTo(x => x.FromDate)
@@ -86,6 +89,14 @@ public sealed class CreateRecurringShiftsHandler(
         else if (!await db.Positions.AnyAsync(p => p.Id == command.PositionId, cancellationToken))
         {
             return Error.NotFound("positions.not_found", "Pozicija nije pronađena.");
+        }
+
+        if (command.TemplateId is { } templateId)
+        {
+            var template = await db.ShiftTemplates.FirstOrDefaultAsync(t => t.Id == templateId, cancellationToken);
+            var (_, templateError) = TemplateRules.ForSeries(template, command.PositionId, command.StartTime, command.EndTime);
+            if (templateError is not null)
+                return templateError;
         }
 
         var timeZoneId = await db.Restaurants.Select(r => r.TimeZoneId).FirstAsync(cancellationToken);
@@ -139,7 +150,7 @@ public sealed class CreateRecurringShiftsHandler(
         var seriesId = Guid.CreateVersion7();
         var restaurantId = currentUser.RestaurantId!.Value;
         db.Shifts.AddRange(toCreate.Select(p =>
-            new Shift(restaurantId, command.EmployeeId, command.PositionId, p.StartsAt, p.EndsAt, command.Note, seriesId)));
+            new Shift(restaurantId, command.EmployeeId, command.PositionId, p.StartsAt, p.EndsAt, command.Note, seriesId, command.TemplateId)));
         await db.SaveChangesAsync(cancellationToken);
 
         var shifts = await db.ProjectToDto(db.Shifts.Where(s => s.SeriesId == seriesId)).ToListAsync(cancellationToken);

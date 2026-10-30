@@ -22,6 +22,7 @@ public interface IAppDbContext
     DbSet<ShiftSwap> ShiftSwaps { get; }
     DbSet<ShiftClaim> ShiftClaims { get; }
     DbSet<DayOffRequest> DayOffRequests { get; }
+    DbSet<ShiftTemplate> ShiftTemplates { get; }
 
     DatabaseFacade Database { get; }
 

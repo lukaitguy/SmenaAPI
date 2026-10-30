@@ -13,7 +13,9 @@ public sealed record ShiftDto(
     DateTimeOffset EndsAt,
     string? Note,
     Guid? SeriesId,
-    DateTimeOffset? PublishedAt);
+    DateTimeOffset? PublishedAt,
+    Guid? TemplateId,
+    string? TemplateName);
 
 internal static class ShiftQueries
 {
@@ -23,6 +25,7 @@ internal static class ShiftQueries
         from s in shifts
         join p in db.Positions on s.PositionId equals p.Id
         from e in db.Employees.Where(e => e.Id == s.EmployeeId).DefaultIfEmpty()
+        from t in db.ShiftTemplates.Where(t => t.Id == s.TemplateId).DefaultIfEmpty()
         orderby s.StartsAt, e.FirstName
         select new ShiftDto(
             s.Id,
@@ -34,5 +37,7 @@ internal static class ShiftQueries
             s.EndsAt,
             s.Note,
             s.SeriesId,
-            s.PublishedAt);
+            s.PublishedAt,
+            s.TemplateId,
+            t == null ? null : t.Name);
 }
