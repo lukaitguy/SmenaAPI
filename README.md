@@ -167,13 +167,14 @@ Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a me
 
 ## Šabloni smena
 
-Smene se obično prave iz **šablona**: unapred definisanih smena po poziciji, koje se u rasporedu prikazuju kao "I" i "II". Novi restoran dobija podrazumevane (konobar I 08:00-16:00 i II 16:00-00:00, kuvar I 07:00-15:00 i II 15:00-23:00, hostesa samo II 16:00-00:00; šanker nema šablone), a restorani koji su već postojali dobijaju iste migracijom. Vreme šablona je lokalno vreme restorana, a kraj pre ili jednak početku znači da se smena završava sutradan.
+Smene se obično prave iz **šablona**: unapred definisanih smena po poziciji, koje se u rasporedu prikazuju kao "I" i "II". Novi restoran dobija podrazumevane (konobar i šanker I 08:00-16:00 i II 16:00-00:00, kuvar I 07:00-15:00 i II 15:00-23:00, hostesa samo II 16:00-00:00), a restorani koji su već postojali dobijaju iste migracijom. Vreme šablona je lokalno vreme restorana, a kraj pre ili jednak početku znači da se smena završava sutradan.
 
 - `POST /api/shifts` i `POST /api/shifts/recurring` primaju opcioni `templateId`. Vreme smene mora da odgovara šablonu (na minut, po satu restorana) i šablon mora da pripada istoj poziciji, inače je 400. Oznaka u rasporedu tako uvek govori istinu.
 - Bez `templateId` smena je **proizvoljna** ("Od-Do"): npr. neko dolazi vanredno ili je smena drugačija. Odgovor tada ima `templateId: null`.
 - Izmena smene (`PUT`) može da pređe sa šablona na proizvoljno vreme i obrnuto. Promena zaposlenog (zamena, preuzimanje) ne dira oznaku.
 - Izmena šablona važi za ubuduće: već napravljene smene zadržavaju svoje vreme i oznaku. Brisanje šablona ostavlja smene, samo bez oznake.
 - Šabloni se brišu zajedno sa pozicijom.
+- Zaposleni može da ima više pozicija (npr. konobar i šanker). Svaka smena ima sopstvenu poziciju, pa se pri pravljenju bira kao ko taj dan radi, a šablon mora da pripada izabranoj poziciji. Ista osoba ne može da radi dve smene u isto vreme, bez obzira na poziciju.
 
 ## Objavljivanje rasporeda
 

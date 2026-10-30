@@ -8,14 +8,27 @@ public class ShiftTemplateTests
         new(Guid.NewGuid(), Guid.NewGuid(), name, new TimeOnly(fromHour, 0), new TimeOnly(toHour, 0));
 
     [Fact]
-    public void Defaults_follow_the_restaurants_standard_shifts_and_leave_out_the_bartender()
+    public void Defaults_follow_the_restaurants_standard_shifts()
     {
         var defaults = ShiftTemplate.Defaults.Select(d => $"{d.Position} {d.Name} {d.Start:HH:mm}-{d.End:HH:mm}").ToList();
 
         Assert.Equal(
-            ["Konobar I 08:00-16:00", "Konobar II 16:00-00:00", "Kuvar I 07:00-15:00", "Kuvar II 15:00-23:00", "Hostesa II 16:00-00:00"],
+            [
+                "Konobar I 08:00-16:00", "Konobar II 16:00-00:00",
+                "Šanker I 08:00-16:00", "Šanker II 16:00-00:00",
+                "Kuvar I 07:00-15:00", "Kuvar II 15:00-23:00",
+                "Hostesa II 16:00-00:00",
+            ],
             defaults);
-        Assert.DoesNotContain(ShiftTemplate.Defaults, d => d.Position == "Šanker");
+    }
+
+    [Fact]
+    public void The_bartender_has_the_same_shifts_as_the_waiter()
+    {
+        string[] Shifts(string position) =>
+            ShiftTemplate.Defaults.Where(d => d.Position == position).Select(d => $"{d.Name} {d.Start:HH:mm}-{d.End:HH:mm}").ToArray();
+
+        Assert.Equal(Shifts("Konobar"), Shifts("Šanker"));
     }
 
     [Fact]

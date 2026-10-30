@@ -51,10 +51,12 @@ public class ShiftTemplatesTests(ApiFactory factory)
         Assert.Equal(
             new[]
             {
-                "Konobar I 08:00-16:00", "Konobar II 16:00-00:00", "Kuvar I 07:00-15:00", "Kuvar II 15:00-23:00", "Hostesa II 16:00-00:00",
+                "Konobar I 08:00-16:00", "Konobar II 16:00-00:00", "Šanker I 08:00-16:00", "Šanker II 16:00-00:00",
+                "Kuvar I 07:00-15:00", "Kuvar II 15:00-23:00", "Hostesa II 16:00-00:00",
             }.Order(),
             summary);
-        Assert.DoesNotContain(s.Templates, t => t.PositionName == "Šanker");
+        Assert.Equal(s.Template("Konobar", "I").StartTime, s.Template("Šanker", "I").StartTime);
+        Assert.True(s.Template("Šanker", "II").EndsNextDay);
         Assert.True(s.Template("Konobar", "II").EndsNextDay);
         Assert.False(s.Template("Konobar", "I").EndsNextDay);
     }
@@ -78,13 +80,13 @@ public class ShiftTemplatesTests(ApiFactory factory)
     public async Task Manager_can_add_change_and_remove_a_template()
     {
         var s = await ArrangeAsync();
-        var bartender = s.Position("Šanker");
+        var hostess = s.Position("Hostesa");   // ima samo II, pa je "I" slobodno
 
         var created = await s.Owner.Http.PostAsJsonAsync("/api/shift-templates",
-            new { positionId = bartender.Id, name = " II ", startTime = "17:00:00", endTime = "01:00:00" }, ApiClient.Json);
+            new { positionId = hostess.Id, name = " I ", startTime = "17:00:00", endTime = "01:00:00" }, ApiClient.Json);
         var template = await ApiClient.ReadAsync<ShiftTemplateDto>(created);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        Assert.Equal("II", template.Name);
+        Assert.Equal("I", template.Name);
         Assert.True(template.EndsNextDay);
 
         var updated = await ApiClient.ReadAsync<ShiftTemplateDto>(await s.Owner.Http.PutAsJsonAsync($"/api/shift-templates/{template.Id}",
@@ -149,7 +151,7 @@ public class ShiftTemplatesTests(ApiFactory factory)
 
         var left = await ApiClient.ReadAsync<List<ShiftTemplateDto>>(await s.Owner.Http.GetAsync("/api/shift-templates"));
         Assert.DoesNotContain(left, t => t.PositionName == "Hostesa");
-        Assert.Equal(4, left.Count);
+        Assert.Equal(6, left.Count);
     }
 
     // ---------- smene po šablonu ----------
@@ -327,6 +329,49 @@ public class ShiftTemplatesTests(ApiFactory factory)
 
         Assert.Equal("II", Assert.Single(mine).TemplateName);
         Assert.Equal("II", Assert.Single(roster).TemplateName);
+    }
+
+    [Fact]
+    public async Task Someone_with_two_roles_works_each_day_as_one_of_them_with_that_roles_shifts()
+    {
+        var s = await ArrangeAsync();
+        await s.Owner.SetPositionsAsync(s.StaffId, s.Position("Konobar").Id, s.Position("Šanker").Id);
+        var next = Day.AddDays(1);
+
+        var asWaiter = await ApiClient.ReadAsync<ShiftDto>(
+            await Create(s, s.StaffId, s.Position("Konobar"), Local(Day, 8), Local(Day, 16), s.Template("Konobar", "I").Id));
+        var asBartender = await ApiClient.ReadAsync<ShiftDto>(
+            await Create(s, s.StaffId, s.Position("Šanker"), Local(next, 16), Local(next.AddDays(1), 0), s.Template("Šanker", "II").Id));
+
+        Assert.Equal(("Konobar", "I"), (asWaiter.PositionName, asWaiter.TemplateName));
+        Assert.Equal(("Šanker", "II"), (asBartender.PositionName, asBartender.TemplateName));
+        var employee = await ApiClient.ReadAsync<Smena.Application.Employees.EmployeeDto>(await s.Owner.Http.GetAsync($"/api/employees/{s.StaffId}"));
+        Assert.Equal(["Konobar", "Šanker"], employee.Positions.Select(p => p.Name).Order());
+    }
+
+    [Fact]
+    public async Task Someone_with_two_roles_cannot_work_both_at_the_same_time_but_can_do_them_back_to_back()
+    {
+        var s = await ArrangeAsync();
+        await s.Owner.SetPositionsAsync(s.StaffId, s.Position("Konobar").Id, s.Position("Šanker").Id);
+        await Create(s, s.StaffId, s.Position("Konobar"), Local(Day, 8), Local(Day, 16), s.Template("Konobar", "I").Id);
+
+        Assert.Equal(HttpStatusCode.Conflict,
+            (await Create(s, s.StaffId, s.Position("Šanker"), Local(Day, 8), Local(Day, 16), s.Template("Šanker", "I").Id)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created,
+            (await Create(s, s.StaffId, s.Position("Šanker"), Local(Day, 16), Local(Day.AddDays(1), 0), s.Template("Šanker", "II").Id)).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_role_cannot_use_the_other_roles_template_even_when_the_times_are_the_same()
+    {
+        var s = await ArrangeAsync();
+        await s.Owner.SetPositionsAsync(s.StaffId, s.Position("Konobar").Id, s.Position("Šanker").Id);
+
+        var response = await Create(s, s.StaffId, s.Position("Konobar"), Local(Day, 8), Local(Day, 16), s.Template("Šanker", "I").Id);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("shifts.template_position", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]

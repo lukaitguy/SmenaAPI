@@ -11,11 +11,13 @@ public class ShiftTemplate : IRestaurantScoped
 {
     public const int MaxNameLength = 20;
 
-    /// <summary>Šabloni koje dobija svaki novi restoran: pozicija, naziv smene, od, do. Šanker nema šablone.</summary>
+    /// <summary>Šabloni koje dobija svaki novi restoran: pozicija, naziv smene, od, do. Šanker ima iste smene kao konobar.</summary>
     public static readonly (string Position, string Name, TimeOnly Start, TimeOnly End)[] Defaults =
     [
         ("Konobar", "I", new TimeOnly(8, 0), new TimeOnly(16, 0)),
         ("Konobar", "II", new TimeOnly(16, 0), new TimeOnly(0, 0)),
+        ("Šanker", "I", new TimeOnly(8, 0), new TimeOnly(16, 0)),
+        ("Šanker", "II", new TimeOnly(16, 0), new TimeOnly(0, 0)),
         ("Kuvar", "I", new TimeOnly(7, 0), new TimeOnly(15, 0)),
         ("Kuvar", "II", new TimeOnly(15, 0), new TimeOnly(23, 0)),
         ("Hostesa", "II", new TimeOnly(16, 0), new TimeOnly(0, 0)),
