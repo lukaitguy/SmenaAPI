@@ -13,7 +13,7 @@ namespace Smena.Application.Claims;
 public sealed class ClaimNotifier(
     IAppDbContext db,
     IIdentityService identity,
-    IEmailSender emailSender,
+    IEmailQueue emailQueue,
     IOptions<AppOptions> appOptions,
     ILogger<ClaimNotifier> logger)
 {
@@ -39,7 +39,7 @@ public sealed class ClaimNotifier(
                 .Where(e => employeeIds.Contains(e.Id))
                 .ToDictionaryAsync(e => e.Id, e => e.UserId, cancellationToken);
             var emails = await identity.GetEmailsAsync(userIds.Values.ToList(), cancellationToken);
-            var link = appOptions.Value.ScheduleLink;
+            var link = appOptions.Value.SwapsLink;
 
             foreach (var claim in claims)
             {
@@ -48,7 +48,7 @@ public sealed class ClaimNotifier(
 
                 try
                 {
-                    await emailSender.SendAsync(Build(to, claim.Status == ClaimStatus.Approved, details.Position, when, link), cancellationToken);
+                    emailQueue.Enqueue(Build(to, claim.Status == ClaimStatus.Approved, details.Position, when, link));
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

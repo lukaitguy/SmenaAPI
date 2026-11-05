@@ -111,11 +111,11 @@ public class PublishShiftsTests(ApiFactory factory)
         var mail = factory.Emails.Sent.Single(m => m.To == s.B.Email && m.Subject == Subject);
         Assert.Contains(s.PositionName, mail.TextBody);
         Assert.DoesNotContain(s.CookPositionName, mail.TextBody);
-        Assert.Contains("/schedule", mail.TextBody);
+        Assert.Contains("/raspored", mail.TextBody);
     }
 
     [Fact]
-    public async Task Failed_mail_does_not_block_publishing_and_is_not_counted()
+    public async Task A_mail_that_fails_later_does_not_block_publishing_or_the_other_mails()
     {
         var s = await ArrangeAsync();
         await CreateAsync(s.Owner, s.AId, s.PositionId, Day.AddHours(8));
@@ -124,8 +124,10 @@ public class PublishShiftsTests(ApiFactory factory)
         var result = await s.Owner.PublishAsync(Day, Day.AddDays(7));
 
         Assert.Equal(1, result.Published);
-        Assert.Equal(1, result.EmployeesNotified);          // samo B
+        // Mejlovi idu kroz red u pozadini, pa se pad slanja ne vidi u odgovoru: broji se šta je stavljeno u red.
+        Assert.Equal(2, result.EmployeesNotified);
         Assert.Equal(0, MailsTo(s.A));
+        Assert.Equal(1, MailsTo(s.B));
         Assert.Single(await MineAsync(s.A));
     }
 

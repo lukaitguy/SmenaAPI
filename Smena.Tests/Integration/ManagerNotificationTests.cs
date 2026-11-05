@@ -65,6 +65,7 @@ public class ManagerNotificationTests(ApiFactory factory)
         Assert.Contains("Zaposleni Test", mail.TextBody);
         Assert.Contains($"{DayOffDate:dd.MM.yyyy.}", mail.TextBody);
         Assert.Contains("slava", mail.TextBody);
+        Assert.Contains("/zahtevi", mail.TextBody);
     }
 
     [Fact]
@@ -113,7 +114,9 @@ public class ManagerNotificationTests(ApiFactory factory)
         Assert.Equal(1, Mails(s.Owner, ClaimSubject));
         Assert.Equal(1, Mails(s.Manager, ClaimSubject));
         Assert.Equal(0, Mails(s.A, ClaimSubject));
-        Assert.Contains("Zaposleni Test", factory.Emails.Sent.Single(m => m.To == s.Owner.Email && m.Subject == ClaimSubject).TextBody);
+        var claimMail = factory.Emails.Sent.Single(m => m.To == s.Owner.Email && m.Subject == ClaimSubject).TextBody;
+        Assert.Contains("Zaposleni Test", claimMail);
+        Assert.Contains("/zahtevi", claimMail);
     }
 
     [Fact]
@@ -146,6 +149,7 @@ public class ManagerNotificationTests(ApiFactory factory)
         Assert.Equal(1, Mails(s.Owner, SwapSubject));
         Assert.Equal(1, Mails(s.Manager, SwapSubject));
         var text = factory.Emails.Sent.Single(m => m.To == s.Owner.Email && m.Subject == SwapSubject).TextBody;
+        Assert.Contains("/zahtevi", text);
         Assert.Contains("Zaposleni Test", text);
     }
 

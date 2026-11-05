@@ -14,6 +14,7 @@ namespace Smena.Application.Shifts;
 /// <param name="PositionIds">Pozicije čiji se raspored objavljuje (npr. samo konobari); prazno znači sve pozicije.</param>
 public sealed record PublishShiftsCommand(DateTimeOffset From, DateTimeOffset To, IReadOnlyList<Guid>? PositionIds = null);
 
+/// <param name="EmployeesNotified">Koliko je mejlova stavljeno u red za slanje (isporuka se potvrđuje tek u pozadini).</param>
 public sealed record PublishedShiftsDto(int Published, int EmployeesNotified);
 
 public sealed class PublishShiftsValidator : AbstractValidator<PublishShiftsCommand>
@@ -73,7 +74,7 @@ public sealed class SchedulePublishedNotifier(
     IAppDbContext db,
     ICurrentUser currentUser,
     IIdentityService identity,
-    IEmailSender emailSender,
+    IEmailQueue emailQueue,
     IOptions<AppOptions> appOptions,
     ILogger<SchedulePublishedNotifier> logger)
 {
@@ -110,7 +111,7 @@ public sealed class SchedulePublishedNotifier(
 
                 try
                 {
-                    await emailSender.SendAsync(Build(to, names, range, link), cancellationToken);
+                    emailQueue.Enqueue(Build(to, names, range, link));
                     sent++;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)

@@ -182,7 +182,11 @@ Brojači su u memoriji instance, pa sa više instanci API-ja kvota važi po inst
 
 Pozivnice se šalju preko SMTP-a (MailKit), pa radi sa bilo kojim servisom koji nudi SMTP (Resend, SendGrid, Gmail...). U produkciji lozinku zadaj kroz `Email__Password`. Lokalno Compose pokreće Mailpit, koji hvata sve mejlove umesto da ih šalje.
 
-Slanje se obavlja unutar zahteva. Ako ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
+Svi mejlovi osim pozivnica idu kroz red u pozadini (`IEmailQueue`): zahtev samo stavi mejl u red i odmah odgovara, a posebna usluga ih šalje jedan po jedan. Pad slanja se samo loguje i ne ruši ni zahtev ni ostale mejlove. Zato `employeesNotified` pri objavi rasporeda broji mejlove stavljene u red, a ne potvrđeno isporučene. Red je u memoriji, pa mejlovi koji nisu stigli da se pošalju pri gašenju servera propadaju.
+
+Pozivnice se šalju unutar zahteva: ako slanje ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
+
+Linkovi u mejlovima vode na stranice aplikacije (`/raspored`, `/zahtevi`, `/zamene`, `/slobodni-dani`, `/najave`).
 
 ## Šabloni smena
 
@@ -201,7 +205,7 @@ Svaka nova smena (pojedinačna ili iz serije) je **nacrt** dok je menadžer ne o
 
 - **Raspored se pravi i objavljuje po ulogama** (konobari, kuvari, hostese): `positionIds` ograničava objavu na izabrane pozicije, a bez njega se objavljuju sve. Uloge se objavljuju nezavisno, svaka kad je spremna.
 - **Zaposleni vide raspored svoje uloge:** `GET /api/schedule` vraća objavljene smene svih kolega na njihovim pozicijama, zajedno sa otvorenim smenama tih pozicija. Ko ima više uloga vidi sve, a `positionId` suzuje na jednu. Raspored drugih uloga i nacrti se ne vide. `GET /api/shifts/mine` ostaje za sopstvene smene.
-- **Jedno obaveštenje:** svaki aktivni zaposleni koji ima objavljenu ulogu dobija mejl da je raspored objavljen i da ga pogleda (uloga, period, link na `{App:FrontendUrl}/schedule`), čak i ako tu nedelju nema smenu. Osoba koja objavljuje ne dobija mejl, a ponovno objavljivanje istog perioda ne šalje ništa. Nema posebnih obaveštenja o izmeni objavljene smene ni o novim otvorenim smenama.
+- **Jedno obaveštenje:** svaki aktivni zaposleni koji ima objavljenu ulogu dobija mejl da je raspored objavljen i da ga pogleda (uloga, period, link na `{App:FrontendUrl}/raspored`), čak i ako tu nedelju nema smenu. Osoba koja objavljuje ne dobija mejl, a ponovno objavljivanje istog perioda ne šalje ništa. Nema posebnih obaveštenja o izmeni objavljene smene ni o novim otvorenim smenama.
 - **Povlačenje objave:** `POST /api/shifts/unpublish` (isti oblik zahteva kao objava) vraća objavljene smene u nacrt, pa ih zaposleni više ne vide. Povlače se samo smene koje još nisu počele, jer su prošle istorija. Povlačenje ne šalje mejl, a ponovna objava šalje.
 - **Svi zahtevi vezani za povučene smene se brišu i više ne postoje**, bez obzira na status: zahtevi za prepuštanje i razmenu (dovoljno je da je bar jedna od dve smene povučena, pa i odobreni, odbijeni i otkazani) i zahtevi za preuzimanje otvorenih smena. Niko ih više ne vidi, a prihvatanje, odbijanje i odobravanje vraćaju 404. Odgovor sadrži `swapRequestsRemoved` i `claimRequestsRemoved`. Brisanje zapisa ne vraća smene koje su već promenile vlasnika. Posle ponovne objave zahtevi se ne vraćaju, ali se mogu podneti iznova. Zahtevi za slobodan dan nisu vezani za smene i ne diraju se.
 - Zaposleni mogu da traže prepuštanje samo za objavljene smene.
@@ -256,7 +260,7 @@ Kad nešto čeka odluku, mejl dobijaju svi aktivni menadžeri i vlasnik restoran
 - novi zahtev za preuzimanje otvorene smene,
 - prepuštanje smene, tek kad je kolega prihvatio (dok kolega ne odgovori menadžer nema šta da odluči).
 
-Mejl se šalje odmah, po jedan po događaju, a neuspelo slanje ne ruši zahtev. Link u mejlu vodi na `{App:FrontendUrl}/requests`.
+Mejl se stavlja u red i šalje u pozadini, po jedan po događaju, a neuspelo slanje ne ruši zahtev. Link u mejlu vodi na `{App:FrontendUrl}/zahtevi`.
 
 ## Prepuštanje i razmena smena
 

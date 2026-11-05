@@ -12,7 +12,7 @@ namespace Smena.Application.DayOffs;
 public sealed class DayOffNotifier(
     IAppDbContext db,
     IIdentityService identity,
-    IEmailSender emailSender,
+    IEmailQueue emailQueue,
     IOptions<AppOptions> appOptions,
     ILogger<DayOffNotifier> logger)
 {
@@ -28,7 +28,7 @@ public sealed class DayOffNotifier(
             if (!emails.TryGetValue(userId, out var to))
                 return;
 
-            await emailSender.SendAsync(Build(to, request, appOptions.Value.ScheduleLink), cancellationToken);
+            emailQueue.Enqueue(Build(to, request, appOptions.Value.DayOffsLink));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -48,12 +48,12 @@ public sealed class DayOffNotifier(
 
             {outcome}
 
-            Raspored: {link}
+            Slobodni dani: {link}
             """;
         var html = $"""
             <p>Zdravo,</p>
             <p>{WebUtility.HtmlEncode(outcome)}</p>
-            <p><a href="{WebUtility.HtmlEncode(link)}">Raspored</a></p>
+            <p><a href="{WebUtility.HtmlEncode(link)}">Slobodni dani</a></p>
             """;
         return new EmailMessage(to, approved ? "Slobodan dan odobren" : "Slobodan dan nije odobren", text, html);
     }

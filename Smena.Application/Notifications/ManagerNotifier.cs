@@ -19,7 +19,7 @@ namespace Smena.Application.Notifications;
 public sealed class ManagerNotifier(
     IAppDbContext db,
     IIdentityService identity,
-    IEmailSender emailSender,
+    IEmailQueue emailQueue,
     IOptions<AppOptions> appOptions,
     ILogger<ManagerNotifier> logger)
 {
@@ -113,7 +113,7 @@ public sealed class ManagerNotifier(
         {
             try
             {
-                await emailSender.SendAsync(new EmailMessage(email, subject, text, html), cancellationToken);
+                emailQueue.Enqueue(new EmailMessage(email, subject, text, html));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

@@ -25,7 +25,7 @@ internal sealed class Counter
 public sealed class ForgotPasswordHandler(
     IIdentityService identity,
     IMemoryCache cache,
-    IEmailSender emailSender,
+    IEmailQueue emailQueue,
     IOptions<AppOptions> appOptions,
     IValidator<ForgotPasswordCommand> validator,
     ILogger<ForgotPasswordHandler> logger)
@@ -60,7 +60,7 @@ public sealed class ForgotPasswordHandler(
                 return;
 
             var link = appOptions.Value.PasswordResetLink(email, token);
-            await emailSender.SendAsync(PasswordResetEmail.Build(email, link), cancellationToken);
+            emailQueue.Enqueue(PasswordResetEmail.Build(email, link));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

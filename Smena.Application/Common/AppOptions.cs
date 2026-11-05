@@ -10,13 +10,15 @@ public sealed class AppOptions
     public string InvitationLink(string token) =>
         $"{FrontendUrl.TrimEnd('/')}/join#{Uri.EscapeDataString(token)}";
 
-    public string RequestsLink => $"{FrontendUrl.TrimEnd('/')}/requests";
+    public string RequestsLink => $"{FrontendUrl.TrimEnd('/')}/zahtevi";
 
-    public string ScheduleLink => $"{FrontendUrl.TrimEnd('/')}/schedule";
+    public string ScheduleLink => $"{FrontendUrl.TrimEnd('/')}/raspored";
 
     public string AnnouncementsLink => $"{FrontendUrl.TrimEnd('/')}/najave";
 
-    public string SwapsLink => $"{FrontendUrl.TrimEnd('/')}/swaps";
+    public string DayOffsLink => $"{FrontendUrl.TrimEnd('/')}/slobodni-dani";
+
+    public string SwapsLink => $"{FrontendUrl.TrimEnd('/')}/zamene";
 
     public string PasswordResetLink(string email, string token) =>
         $"{FrontendUrl.TrimEnd('/')}/reset-password#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";

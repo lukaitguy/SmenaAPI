@@ -15,7 +15,7 @@ namespace Smena.Application.Swaps;
 public sealed class SwapNotifier(
     IAppDbContext db,
     IIdentityService identity,
-    IEmailSender emailSender,
+    IEmailQueue emailQueue,
     IOptions<AppOptions> appOptions,
     ILogger<SwapNotifier> logger)
 {
@@ -65,7 +65,7 @@ public sealed class SwapNotifier(
             if (!decided)
             {
                 if (emails.TryGetValue(target.UserId, out var to))
-                    await emailSender.SendAsync(SwapEmail.Requested(to, requester.Name, details.Position, when, swap.Note, link, exchange), cancellationToken);
+                    emailQueue.Enqueue(SwapEmail.Requested(to, requester.Name, details.Position, when, swap.Note, link, exchange));
                 return;
             }
 
@@ -73,7 +73,7 @@ public sealed class SwapNotifier(
             foreach (var person in new[] { requester, target })
             {
                 if (emails.TryGetValue(person.UserId, out var to))
-                    await emailSender.SendAsync(SwapEmail.Decided(to, approved, requester.Name, target.Name, details.Position, when, link, exchange), cancellationToken);
+                    emailQueue.Enqueue(SwapEmail.Decided(to, approved, requester.Name, target.Name, details.Position, when, link, exchange));
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
