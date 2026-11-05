@@ -4,6 +4,7 @@ using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
+using Smena.Domain.EightySix;
 using Smena.Domain.Shifts;
 using Smena.Domain.Wishes;
 using Smena.Infrastructure.Identity;
@@ -164,6 +165,21 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
             .HasDatabaseName("ux_shift_swaps_open_per_target_shift")
             .IsUnique()
             .HasFilter("status IN ('Pending', 'Accepted') AND target_shift_id IS NOT NULL");
+    }
+}
+
+internal sealed class EightySixItemConfiguration : IEntityTypeConfiguration<EightySixItem>
+{
+    public void Configure(EntityTypeBuilder<EightySixItem> builder)
+    {
+        builder.Property(i => i.Name).HasMaxLength(EightySixItem.MaxNameLength);
+        builder.Property(i => i.Note).HasMaxLength(EightySixItem.MaxNoteLength);
+
+        builder.HasIndex(i => new { i.RestaurantId, i.PositionId });
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(i => i.RestaurantId);
+        // Lista je kratkotrajna: brisanje pozicije briše i njene stavke.
+        builder.HasOne<Position>().WithMany().HasForeignKey(i => i.PositionId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(i => i.CreatedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

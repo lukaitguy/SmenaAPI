@@ -191,6 +191,55 @@ namespace Smena.Infrastructure.Persistence.Migrations
                     b.ToTable("day_off_requests", (string)null);
                 });
 
+            modelBuilder.Entity("Smena.Domain.EightySix.EightySixItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByEmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_employee_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("PositionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("position_id");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_eighty_six_items");
+
+                    b.HasIndex("CreatedByEmployeeId")
+                        .HasDatabaseName("ix_eighty_six_items_created_by_employee_id");
+
+                    b.HasIndex("PositionId")
+                        .HasDatabaseName("ix_eighty_six_items_position_id");
+
+                    b.HasIndex("RestaurantId", "PositionId")
+                        .HasDatabaseName("ix_eighty_six_items_restaurant_id_position_id");
+
+                    b.ToTable("eighty_six_items", (string)null);
+                });
+
             modelBuilder.Entity("Smena.Domain.Employees.Employee", b =>
                 {
                     b.Property<Guid>("Id")
@@ -901,6 +950,30 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_day_off_requests_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Smena.Domain.EightySix.EightySixItem", b =>
+                {
+                    b.HasOne("Smena.Domain.Employees.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_eighty_six_items_employees_created_by_employee_id");
+
+                    b.HasOne("Smena.Domain.Restaurants.Position", null)
+                        .WithMany()
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_eighty_six_items_positions_position_id");
+
+                    b.HasOne("Smena.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_eighty_six_items_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Smena.Domain.Employees.Employee", b =>
