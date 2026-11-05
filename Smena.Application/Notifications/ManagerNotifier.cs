@@ -8,6 +8,7 @@ using Smena.Application.Swaps;
 using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Shifts;
+using Smena.Domain.Wishes;
 
 namespace Smena.Application.Notifications;
 
@@ -31,6 +32,18 @@ public sealed class ManagerNotifier(
                 request.EmployeeId,
                 "Novi zahtev za slobodan dan",
                 $"{name} traži slobodan dan {request.Date:dd.MM.yyyy.}.{reason}",
+                cancellationToken);
+        });
+
+    /// <summary>Želja za dan ("I ili slobodan") ne čeka odluku, menadžer samo dobija informaciju.</summary>
+    public Task WishSavedAsync(ShiftWish wish, CancellationToken cancellationToken) =>
+        SafeAsync("želja za dan", async () =>
+        {
+            var name = await NameAsync(wish.EmployeeId, cancellationToken);
+            await SendToManagersAsync(
+                wish.EmployeeId,
+                "Nova želja radnika",
+                $"{name} za {wish.Date:dd.MM.yyyy.} može smenu {wish.PreferredShift} ili je slobodan.",
                 cancellationToken);
         });
 

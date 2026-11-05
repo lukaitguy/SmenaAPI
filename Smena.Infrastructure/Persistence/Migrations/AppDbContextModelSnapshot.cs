@@ -648,6 +648,52 @@ namespace Smena.Infrastructure.Persistence.Migrations
                     b.ToTable("shift_templates", (string)null);
                 });
 
+            modelBuilder.Entity("Smena.Domain.Wishes.ShiftWish", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("date");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<string>("PreferredShift")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("preferred_shift");
+
+                    b.Property<Guid>("RestaurantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("restaurant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_shift_wishes");
+
+                    b.HasIndex("EmployeeId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("ix_shift_wishes_employee_id_date");
+
+                    b.HasIndex("RestaurantId", "Date")
+                        .HasDatabaseName("ix_shift_wishes_restaurant_id_date");
+
+                    b.ToTable("shift_wishes", (string)null);
+                });
+
             modelBuilder.Entity("Smena.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1024,6 +1070,23 @@ namespace Smena.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_shift_templates_restaurants_restaurant_id");
+                });
+
+            modelBuilder.Entity("Smena.Domain.Wishes.ShiftWish", b =>
+                {
+                    b.HasOne("Smena.Domain.Employees.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_shift_wishes_employees_employee_id");
+
+                    b.HasOne("Smena.Domain.Restaurants.Restaurant", null)
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_shift_wishes_restaurants_restaurant_id");
                 });
 
             modelBuilder.Entity("Smena.Infrastructure.Identity.RefreshToken", b =>

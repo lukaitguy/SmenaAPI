@@ -10,6 +10,7 @@ using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
 using Smena.Domain.Shifts;
+using Smena.Domain.Wishes;
 using Smena.Infrastructure.Identity;
 
 namespace Smena.Infrastructure.Persistence;
@@ -32,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<ShiftClaim> ShiftClaims => Set<ShiftClaim>();
     public DbSet<DayOffRequest> DayOffRequests => Set<DayOffRequest>();
     public DbSet<ShiftTemplate> ShiftTemplates => Set<ShiftTemplate>();
+    public DbSet<ShiftWish> ShiftWishes => Set<ShiftWish>();
 
     /// <summary>Ključevi za DataProtection (npr. tokeni za reset lozinke); u bazi da prežive restart i više instanci.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();

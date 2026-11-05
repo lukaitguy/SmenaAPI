@@ -5,6 +5,7 @@ using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
 using Smena.Domain.Shifts;
+using Smena.Domain.Wishes;
 
 namespace Smena.Application.Abstractions;
 
@@ -23,6 +24,7 @@ public interface IAppDbContext
     DbSet<ShiftClaim> ShiftClaims { get; }
     DbSet<DayOffRequest> DayOffRequests { get; }
     DbSet<ShiftTemplate> ShiftTemplates { get; }
+    DbSet<ShiftWish> ShiftWishes { get; }
 
     DatabaseFacade Database { get; }
 

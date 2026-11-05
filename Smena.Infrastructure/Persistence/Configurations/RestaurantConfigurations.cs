@@ -5,6 +5,7 @@ using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
 using Smena.Domain.Shifts;
+using Smena.Domain.Wishes;
 using Smena.Infrastructure.Identity;
 
 namespace Smena.Infrastructure.Persistence.Configurations;
@@ -163,6 +164,20 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
             .HasDatabaseName("ux_shift_swaps_open_per_target_shift")
             .IsUnique()
             .HasFilter("status IN ('Pending', 'Accepted') AND target_shift_id IS NOT NULL");
+    }
+}
+
+internal sealed class ShiftWishConfiguration : IEntityTypeConfiguration<ShiftWish>
+{
+    public void Configure(EntityTypeBuilder<ShiftWish> builder)
+    {
+        builder.Property(w => w.PreferredShift).HasMaxLength(ShiftWish.MaxNameLength);
+
+        // Za isti dan najviše jedna želja po radniku; nova je zamena stare.
+        builder.HasIndex(w => new { w.EmployeeId, w.Date }).IsUnique();
+        builder.HasIndex(w => new { w.RestaurantId, w.Date });
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(w => w.RestaurantId);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(w => w.EmployeeId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
