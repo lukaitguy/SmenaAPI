@@ -14,6 +14,8 @@ public sealed class AppOptions
 
     public string ScheduleLink => $"{FrontendUrl.TrimEnd('/')}/schedule";
 
+    public string AnnouncementsLink => $"{FrontendUrl.TrimEnd('/')}/najave";
+
     public string SwapsLink => $"{FrontendUrl.TrimEnd('/')}/swaps";
 
     public string PasswordResetLink(string email, string token) =>

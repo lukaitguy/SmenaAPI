@@ -148,6 +148,15 @@ Primeri zahteva su u `Smena.API/SmenaAPI.http`.
 - Greška slanja se samo loguje i nikad ne obara već sačuvanu promenu.
 - Za više servera treba Redis backplane; dok radi jedna instanca nije potreban.
 
+## Najave
+
+Menadžer pravi najavu (najčešće sastanak): naslov, opis, opcioni termin, pa kome ide: cele uloge (`positionIds`) i/ili pojedinačne osobe (`employeeIds`).
+
+- Primaoci su svi aktivni zaposleni sa izabranom ulogom plus izabrane osobe, bez autora. Pamte se pri pravljenju, pa kasnija promena uloga ne menja ko je najavu dobio. Ako nema nijednog primaoca, najava se ne pravi.
+- Primaoci je dobijaju uživo (`announcementCreated` na grupu `employee:{id}`) i mejlom, a menadžeri dobijaju signal `announcementsChanged` da povuku spisak.
+- Primalac potvrđuje `POST /api/announcements/{id}/read` ("Pročitao sam"); ponovljeno potvrđivanje ništa ne menja. Menadžeri uživo dobijaju `announcementRead`, a `GET /api/announcements` im vraća ko je primio i ko je pročitao. Zaposleni (`GET /api/announcements/mine`) ne vide ostale primaoce.
+- Mejlovi idu kroz red u pozadini (`IEmailQueue`), pa zahtev ne čeka SMTP; greška slanja se samo loguje.
+
 ## Šifrovanje ključeva
 
 ASP.NET DataProtection ključevi (njima se potpisuju npr. tokeni za reset lozinke) čuvaju se u tabeli `data_protection_keys`. Da ne bi stajali u bazi u običnom tekstu, u produkciji ih šifruj sertifikatom:

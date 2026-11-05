@@ -58,6 +58,10 @@ public static class DependencyInjection
         else
             services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+        services.AddSingleton<ChannelEmailQueue>();
+        services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<ChannelEmailQueue>());
+        services.AddHostedService<EmailQueueWorker>();
+
         return services;
     }
 }

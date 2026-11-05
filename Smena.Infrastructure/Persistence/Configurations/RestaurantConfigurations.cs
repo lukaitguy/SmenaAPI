@@ -4,6 +4,7 @@ using Smena.Domain.DayOffs;
 using Smena.Domain.Employees;
 using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
+using Smena.Domain.Announcements;
 using Smena.Domain.EightySix;
 using Smena.Domain.Shifts;
 using Smena.Domain.Wishes;
@@ -165,6 +166,31 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
             .HasDatabaseName("ux_shift_swaps_open_per_target_shift")
             .IsUnique()
             .HasFilter("status IN ('Pending', 'Accepted') AND target_shift_id IS NOT NULL");
+    }
+}
+
+internal sealed class AnnouncementConfiguration : IEntityTypeConfiguration<Announcement>
+{
+    public void Configure(EntityTypeBuilder<Announcement> builder)
+    {
+        builder.Property(a => a.Title).HasMaxLength(Announcement.MaxTitleLength);
+        builder.Property(a => a.Body).HasMaxLength(Announcement.MaxBodyLength);
+
+        builder.HasIndex(a => new { a.RestaurantId, a.CreatedAt });
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(a => a.RestaurantId);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(a => a.CreatedByEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(a => a.Recipients).WithOne().HasForeignKey(r => r.AnnouncementId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class AnnouncementRecipientConfiguration : IEntityTypeConfiguration<AnnouncementRecipient>
+{
+    public void Configure(EntityTypeBuilder<AnnouncementRecipient> builder)
+    {
+        builder.HasKey(r => new { r.AnnouncementId, r.EmployeeId });
+        builder.HasIndex(r => r.EmployeeId);
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(r => r.RestaurantId);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(r => r.EmployeeId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

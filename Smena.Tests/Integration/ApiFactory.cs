@@ -29,6 +29,27 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         // RateLimitTests ga spušta na male vrednosti.
         builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
         builder.UseSetting("RateLimiting:ForgotPassword:PermitLimit", "100000");
-        builder.ConfigureServices(services => services.AddSingleton<IEmailSender>(Emails));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IEmailSender>(Emails);
+            // Red za slanje u pozadini bi testove učinio nepouzdanim (mejl stiže "kasnije"), pa se u testovima šalje odmah.
+            services.AddSingleton<IEmailQueue>(new InlineEmailQueue(Emails));
+        });
+    }
+}
+
+/// <summary>Zamena za red mejlova u testovima: šalje odmah, pa test odmah vidi šta je poslato.</summary>
+public sealed class InlineEmailQueue(FakeEmailSender sender) : IEmailQueue
+{
+    public void Enqueue(EmailMessage message)
+    {
+        try
+        {
+            sender.SendAsync(message, CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (InvalidOperationException)
+        {
+            // Pravi red u pozadini loguje grešku slanja i ide dalje.
+        }
     }
 }

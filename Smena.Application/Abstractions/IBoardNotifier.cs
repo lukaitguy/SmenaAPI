@@ -1,3 +1,4 @@
+using Smena.Application.Announcements;
 using Smena.Application.EightySix;
 
 namespace Smena.Application.Abstractions;
@@ -12,4 +13,13 @@ public interface IBoardNotifier
     Task EightySixAddedAsync(Guid restaurantId, EightySixItemDto item, CancellationToken cancellationToken);
 
     Task EightySixRemovedAsync(Guid restaurantId, Guid itemId, CancellationToken cancellationToken);
+
+    /// <summary>Nova najava: primaoci dobijaju celu najavu, a menadžeri signal da osveže spisak.</summary>
+    Task AnnouncementCreatedAsync(Guid restaurantId, IReadOnlyCollection<Guid> recipientEmployeeIds, AnnouncementDto item, CancellationToken cancellationToken);
+
+    /// <summary>Najava je obrisana: primaoci je uklanjaju, menadžeri osvežavaju spisak.</summary>
+    Task AnnouncementDeletedAsync(Guid restaurantId, IReadOnlyCollection<Guid> recipientEmployeeIds, Guid announcementId, CancellationToken cancellationToken);
+
+    /// <summary>Neko je potvrdio "Pročitao sam": vide samo menadžeri.</summary>
+    Task AnnouncementReadAsync(Guid restaurantId, Guid announcementId, Guid employeeId, DateTimeOffset readAt, CancellationToken cancellationToken);
 }
