@@ -75,6 +75,7 @@ public sealed class SchedulePublishedNotifier(
     ICurrentUser currentUser,
     IIdentityService identity,
     IEmailQueue emailQueue,
+    IPushQueue pushQueue,
     IOptions<AppOptions> appOptions,
     ILogger<SchedulePublishedNotifier> logger)
 {
@@ -100,14 +101,16 @@ public sealed class SchedulePublishedNotifier(
 
             foreach (var recipient in recipients)
             {
-                if (!emails.TryGetValue(recipient.UserId, out var to))
-                    continue;
-
                 // Samo uloge ovog zaposlenog: konobar ne dobija obaveštenje o rasporedu kuvara.
                 var relevant = recipient.Positions.Where(byPosition.ContainsKey).ToList();
                 var shifts = relevant.SelectMany(p => byPosition[p]).ToList();
                 var names = string.Join(", ", relevant.Select(p => positionNames[p]).Order());
                 var range = $"{LocalTime.Format(shifts.Min(s => s.StartsAt), timeZoneId)} - {LocalTime.Format(shifts.Max(s => s.StartsAt), timeZoneId)}";
+
+                pushQueue.Enqueue(new PushMessage([recipient.Id], "Objavljen je novi raspored", $"{names} ({range})", "/raspored"));
+
+                if (!emails.TryGetValue(recipient.UserId, out var to))
+                    continue;
 
                 try
                 {

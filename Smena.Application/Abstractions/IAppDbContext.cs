@@ -6,6 +6,7 @@ using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
 using Smena.Domain.Announcements;
 using Smena.Domain.EightySix;
+using Smena.Domain.Push;
 using Smena.Domain.Shifts;
 using Smena.Domain.Wishes;
 
@@ -29,6 +30,7 @@ public interface IAppDbContext
     DbSet<ShiftWish> ShiftWishes { get; }
     DbSet<EightySixItem> EightySixItems { get; }
     DbSet<Announcement> Announcements { get; }
+    DbSet<PushSubscription> PushSubscriptions { get; }
     DbSet<AnnouncementRecipient> AnnouncementRecipients { get; }
 
     DatabaseFacade Database { get; }

@@ -16,6 +16,7 @@ public sealed class SwapNotifier(
     IAppDbContext db,
     IIdentityService identity,
     IEmailQueue emailQueue,
+    IPushQueue pushQueue,
     IOptions<AppOptions> appOptions,
     ILogger<SwapNotifier> logger)
 {
@@ -64,6 +65,11 @@ public sealed class SwapNotifier(
 
             if (!decided)
             {
+                pushQueue.Enqueue(new PushMessage(
+                    [target.Id],
+                    exchange is null ? "Kolega ti prepušta smenu" : "Kolega predlaže razmenu smena",
+                    $"{requester.Name}: {details.Position}, {when}",
+                    "/zamene"));
                 if (emails.TryGetValue(target.UserId, out var to))
                     emailQueue.Enqueue(SwapEmail.Requested(to, requester.Name, details.Position, when, swap.Note, link, exchange));
                 return;
@@ -72,6 +78,11 @@ public sealed class SwapNotifier(
             var approved = swap.Status == SwapStatus.Approved;
             foreach (var person in new[] { requester, target })
             {
+                pushQueue.Enqueue(new PushMessage(
+                    [person.Id],
+                    approved ? "Zamena smene je odobrena" : "Zamena smene nije odobrena",
+                    $"{requester.Name} i {target.Name}: {details.Position}, {when}",
+                    "/moje-smene"));
                 if (emails.TryGetValue(person.UserId, out var to))
                     emailQueue.Enqueue(SwapEmail.Decided(to, approved, requester.Name, target.Name, details.Position, when, link, exchange));
             }

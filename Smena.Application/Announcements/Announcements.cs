@@ -85,6 +85,7 @@ public sealed class CreateAnnouncementHandler(
     IValidator<CreateAnnouncementCommand> validator,
     IBoardNotifier board,
     IEmailQueue emailQueue,
+    IPushQueue pushQueue,
     IIdentityService identity,
     IOptions<AppOptions> appOptions,
     TimeProvider time)
@@ -127,9 +128,27 @@ public sealed class CreateAnnouncementHandler(
         var recipientIds = recipients.Select(r => r.Id).ToList();
         var forEmployees = (await AnnouncementQueries.ToDtosAsync(db, [announcement], me: null, includeRecipients: false, cancellationToken))[0];
         await board.AnnouncementCreatedAsync(announcement.RestaurantId, recipientIds, forEmployees, cancellationToken);
+        await QueuePushAsync(announcement, recipientIds, cancellationToken);
         await QueueEmailsAsync(announcement, recipients.Select(r => r.UserId).ToList(), cancellationToken);
 
         return (await AnnouncementQueries.ToDtosAsync(db, [announcement], me, includeRecipients: true, cancellationToken))[0];
+    }
+
+    /// <summary>Push svim primaocima: termin sastanka ako postoji, inače početak opisa.</summary>
+    private async Task QueuePushAsync(Announcement announcement, IReadOnlyCollection<Guid> recipientIds, CancellationToken cancellationToken)
+    {
+        string body;
+        if (announcement.MeetingAt is { } at)
+        {
+            var timeZoneId = await db.Restaurants.Select(r => r.TimeZoneId).FirstAsync(cancellationToken);
+            body = $"Termin: {LocalTime.Format(at, timeZoneId)}";
+        }
+        else
+        {
+            var text = announcement.Body ?? "";
+            body = text.Length <= 100 ? text : text[..100] + "…";
+        }
+        pushQueue.Enqueue(new PushMessage(recipientIds, announcement.Title, body, "/najave"));
     }
 
     /// <summary>Mejl svakom primaocu, u pozadini; greška pripreme ne sme da obori već sačuvanu najavu.</summary>

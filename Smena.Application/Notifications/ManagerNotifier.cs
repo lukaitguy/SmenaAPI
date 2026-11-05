@@ -20,6 +20,7 @@ public sealed class ManagerNotifier(
     IAppDbContext db,
     IIdentityService identity,
     IEmailQueue emailQueue,
+    IPushQueue pushQueue,
     IOptions<AppOptions> appOptions,
     ILogger<ManagerNotifier> logger)
 {
@@ -86,14 +87,16 @@ public sealed class ManagerNotifier(
 
     private async Task SendToManagersAsync(Guid exceptEmployeeId, string subject, string line, CancellationToken cancellationToken)
     {
-        var userIds = await db.Employees
+        var managers = await db.Employees
             .Where(e => (e.Role == EmployeeRole.Manager || e.Role == EmployeeRole.Owner)
                         && e.Status == EmployeeStatus.Active && e.Id != exceptEmployeeId)
-            .Select(e => e.UserId)
+            .Select(e => new { e.Id, e.UserId })
             .ToListAsync(cancellationToken);
-        if (userIds.Count == 0)
+        if (managers.Count == 0)
             return;
 
+        pushQueue.Enqueue(new PushMessage(managers.Select(m => m.Id).ToList(), subject, line, "/zahtevi"));
+        var userIds = managers.Select(m => m.UserId).ToList();
         var emails = await identity.GetEmailsAsync(userIds, cancellationToken);
         var link = appOptions.Value.RequestsLink;
         var text = $"""

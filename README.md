@@ -72,6 +72,7 @@ Domenski testovi rade bez baze. Integracioni testovi dižu ceo API nad pravim Po
 | `App:FrontendUrl` | URL frontenda, iz njega se prave linkovi u mejlovima |
 | `Email:Host`, `Email:Port`, `Email:Username`, `Email:Password`, `Email:UseTls` | SMTP server za slanje mejlova. Ako `Email:Host` nije podešen, mejlovi se ne šalju (u log ide samo primalac i naslov). |
 | `Email:FromAddress`, `Email:FromName` | Pošiljalac mejlova |
+| `Push:PublicKey`, `Push:PrivateKey`, `Push:Subject` | VAPID ključevi za web push (vidi odeljak „Web push"). Bez ključeva je push isključen, a aplikacija radi normalno. |
 | `Database:MigrateOnStartup` | Automatska primena migracija |
 | `RateLimiting:Auth` / `RateLimiting:ForgotPassword` | `PermitLimit` i `WindowSeconds` po IP adresi (podrazumevano 10 zahteva u minutu, odnosno 3 u 15 minuta) |
 | `DataProtection:Certificate:Path` ili `:Base64`, `:Password` | PFX sertifikat kojim se šifruju DataProtection ključevi u bazi (u Compose-u kroz `DATAPROTECTION_CERT_BASE64` i `DATAPROTECTION_CERT_PASSWORD`). Bez njega su ključevi nešifrovani, uz upozorenje u logu. |
@@ -156,6 +157,17 @@ Menadžer pravi najavu (najčešće sastanak): naslov, opis, opcioni termin, pa 
 - Primaoci je dobijaju uživo (`announcementCreated` na grupu `employee:{id}`) i mejlom, a menadžeri dobijaju signal `announcementsChanged` da povuku spisak.
 - Primalac potvrđuje `POST /api/announcements/{id}/read` ("Pročitao sam"); ponovljeno potvrđivanje ništa ne menja. Menadžeri uživo dobijaju `announcementRead`, a `GET /api/announcements` im vraća ko je primio i ko je pročitao. Zaposleni (`GET /api/announcements/mine`) ne vide ostale primaoce.
 - Mejlovi idu kroz red u pozadini (`IEmailQueue`), pa zahtev ne čeka SMTP; greška slanja se samo loguje.
+
+## Web push
+
+Obaveštenja stižu na telefon i kad aplikacija nije otvorena: nova najava, zahtev za zamenu i njegova odluka, odluka o otvorenoj smeni i slobodnom danu, objavljen raspored, a menadžerima novi zahtevi.
+
+- **Ključevi:** par VAPID ključeva se pravi jednom (`npx web-push generate-vapid-keys`) i zadaje kroz `Push__PublicKey`, `Push__PrivateKey` i `Push__Subject` (`mailto:…`). Privatni ključ je tajna. U `appsettings.Development.json` stoji **razvojni par koji je javan u repozitorijumu**; u produkciji koristi sopstveni.
+- **Pretplata:** `GET /api/push/config` (da li je uključeno + javni ključ), `POST /api/push/subscriptions` (telo je `PushSubscription.toJSON()` iz browsera), `DELETE /api/push/subscriptions?endpoint=…`, `POST /api/push/test` (probno obaveštenje sebi). Isti zaposleni može imati najviše 10 uređaja. Adresa uređaja je jedinstvena, pa kad se isti browser prijavi kao drugi zaposleni iz istog restorana pretplata prelazi na njega, a za drugi restoran dobija 409 (klijent tada pravi novu pretplatu).
+- **Slanje:** kroz red u pozadini (`IPushQueue`), kao i mejlovi, pa zahtev ne čeka push servise. Greška slanja se samo loguje, a pretplata koju servis prijavi kao nepostojeću (404/410) se briše.
+- **Protokol:** implementiran je sam (`WebPushProtocol`), po RFC 8291 (`aes128gcm`) i RFC 8292 (`vapid t=…, k=…`). Starije šeme (`aesgcm`, `WebPush <jwt>`) Safari na iPhone-u ne prima, a popularna C# biblioteka ih koristi. Izlaz se poredi sa nezavisnom implementacijom (`http_ece` iz Node-a) u testu, a VAPID potpis je proveren i u Node-u.
+- **Poruka:** oblik koji razume Angular service worker (`{"notification":{title, body, icon, data:{onActionClick:…}}}`), pa klik otvara odgovarajuću stranicu aplikacije.
+- **Ograničenja:** na iPhone-u (iOS 16.4+) rade samo za aplikaciju dodatu na početni ekran i samo preko **https** veze. Zato se prava isporuka proverava tek na serveru sa sertifikatom.
 
 ## Šifrovanje ključeva
 

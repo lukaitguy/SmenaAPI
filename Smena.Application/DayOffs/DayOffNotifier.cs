@@ -13,6 +13,7 @@ public sealed class DayOffNotifier(
     IAppDbContext db,
     IIdentityService identity,
     IEmailQueue emailQueue,
+    IPushQueue pushQueue,
     IOptions<AppOptions> appOptions,
     ILogger<DayOffNotifier> logger)
 {
@@ -20,6 +21,13 @@ public sealed class DayOffNotifier(
     {
         try
         {
+            var approvedDay = request.Status == DayOffStatus.Approved;
+            pushQueue.Enqueue(new PushMessage(
+                [request.EmployeeId],
+                approvedDay ? "Slobodan dan odobren" : "Slobodan dan nije odobren",
+                request.Date.ToString("dd.MM.yyyy."),
+                "/slobodni-dani"));
+
             var userId = await db.Employees
                 .Where(e => e.Id == request.EmployeeId)
                 .Select(e => e.UserId)

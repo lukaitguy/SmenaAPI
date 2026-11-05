@@ -4,9 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Smena.Application.Abstractions;
+using Smena.Application.Common;
 using Smena.Infrastructure.Email;
 using Smena.Infrastructure.Identity;
 using Smena.Infrastructure.Persistence;
+using Smena.Infrastructure.Push;
 using Smena.Infrastructure.Security;
 
 namespace Smena.Infrastructure;
@@ -61,6 +63,13 @@ public static class DependencyInjection
         services.AddSingleton<ChannelEmailQueue>();
         services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<ChannelEmailQueue>());
         services.AddHostedService<EmailQueueWorker>();
+
+        services.Configure<PushOptions>(configuration.GetSection(PushOptions.SectionName));
+        services.AddSingleton<IPushSender, WebPushSender>();
+        services.AddScoped<PushDispatcher>();
+        services.AddSingleton<ChannelPushQueue>();
+        services.AddSingleton<IPushQueue>(sp => sp.GetRequiredService<ChannelPushQueue>());
+        services.AddHostedService<PushQueueWorker>();
 
         return services;
     }

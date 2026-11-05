@@ -6,6 +6,7 @@ using Smena.Domain.Invitations;
 using Smena.Domain.Restaurants;
 using Smena.Domain.Announcements;
 using Smena.Domain.EightySix;
+using Smena.Domain.Push;
 using Smena.Domain.Shifts;
 using Smena.Domain.Wishes;
 using Smena.Infrastructure.Identity;
@@ -166,6 +167,23 @@ internal sealed class ShiftSwapConfiguration : IEntityTypeConfiguration<ShiftSwa
             .HasDatabaseName("ux_shift_swaps_open_per_target_shift")
             .IsUnique()
             .HasFilter("status IN ('Pending', 'Accepted') AND target_shift_id IS NOT NULL");
+    }
+}
+
+internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<PushSubscription>
+{
+    public void Configure(EntityTypeBuilder<PushSubscription> builder)
+    {
+        builder.Property(s => s.Endpoint).HasMaxLength(PushSubscription.MaxEndpointLength);
+        builder.Property(s => s.P256dh).HasMaxLength(PushSubscription.MaxKeyLength);
+        builder.Property(s => s.Auth).HasMaxLength(PushSubscription.MaxKeyLength);
+        builder.Property(s => s.UserAgent).HasMaxLength(300);
+
+        // Adresa je jedinstvena za browser u celom sistemu, ne samo u jednom restoranu.
+        builder.HasIndex(s => s.Endpoint).IsUnique();
+        builder.HasIndex(s => s.EmployeeId);
+        builder.HasOne<Restaurant>().WithMany().HasForeignKey(s => s.RestaurantId);
+        builder.HasOne<Employee>().WithMany().HasForeignKey(s => s.EmployeeId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

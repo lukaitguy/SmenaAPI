@@ -14,6 +14,7 @@ public sealed class ClaimNotifier(
     IAppDbContext db,
     IIdentityService identity,
     IEmailQueue emailQueue,
+    IPushQueue pushQueue,
     IOptions<AppOptions> appOptions,
     ILogger<ClaimNotifier> logger)
 {
@@ -43,6 +44,13 @@ public sealed class ClaimNotifier(
 
             foreach (var claim in claims)
             {
+                var granted = claim.Status == ClaimStatus.Approved;
+                pushQueue.Enqueue(new PushMessage(
+                    [claim.EmployeeId],
+                    granted ? "Otvorena smena je tvoja" : "Zahtev za otvorenu smenu je odbijen",
+                    $"{details.Position}, {when}",
+                    granted ? "/moje-smene" : "/zamene"));
+
                 if (!userIds.TryGetValue(claim.EmployeeId, out var userId) || !emails.TryGetValue(userId, out var to))
                     continue;
 
