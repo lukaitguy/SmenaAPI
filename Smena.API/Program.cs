@@ -44,6 +44,9 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddSingleton<IBoardNotifier, SignalRBoardNotifier>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
@@ -59,6 +62,19 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
             NameClaimType = SmenaClaims.UserId,
             RoleClaimType = SmenaClaims.Role,
             ClockSkew = TimeSpan.FromSeconds(30),
+        };
+
+        // Browser ne može da postavi Authorization zaglavlje na WebSocket, pa SignalR šalje token u query stringu.
+        // Prihvata se samo za hub, nikad za obične API pozive.
+        bearer.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(BoardHub.Path))
+                    context.Token = token;
+                return Task.CompletedTask;
+            },
         };
     });
 
@@ -101,6 +117,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<BoardHub>(BoardHub.Path);
 app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();

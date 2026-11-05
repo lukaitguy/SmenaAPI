@@ -25,6 +25,9 @@ public sealed class ApiClient(HttpClient http, string email)
     public HttpClient Http => http;
     public string Email => email;
 
+    /// <summary>Token prijavljenog korisnika (za SignalR, koji ga šalje u query stringu).</summary>
+    public string AccessToken => http.DefaultRequestHeaders.Authorization!.Parameter!;
+
     public static string NewEmail() => $"{Guid.NewGuid():N}@test.rs";
 
     /// <summary>Registruje novi restoran; vraćeni klijent je prijavljen kao njegov vlasnik.</summary>

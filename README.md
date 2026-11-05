@@ -138,6 +138,16 @@ U Docker okruženju se ključevi prosleđuju kao environment varijable sa `__` u
 
 Primeri zahteva su u `Smena.API/SmenaAPI.http`.
 
+## Ekran smene uživo (SignalR)
+
+`/hubs/board` gura promene svim prijavljenim zaposlenima restorana. Komande ostaju obični REST pozivi (npr. `POST /api/eighty-six`), a hub samo šalje događaje: `eightySixAdded` (cela stavka) i `eightySixRemoved` (id).
+
+- Svaka veza ulazi u grupu `restaurant:{id}` iz JWT claim-a, pa nikad ne dobija događaje drugog restorana.
+- Browser ne može da postavi `Authorization` zaglavlje na WebSocket, pa se token prima u `?access_token=` samo za putanju huba.
+- Baza je izvor istine. Poruka je samo signal; klijent koji izgubi vezu posle ponovnog povezivanja povuče ceo snimak (`GET /api/eighty-six`).
+- Greška slanja se samo loguje i nikad ne obara već sačuvanu promenu.
+- Za više servera treba Redis backplane; dok radi jedna instanca nije potreban.
+
 ## Šifrovanje ključeva
 
 ASP.NET DataProtection ključevi (njima se potpisuju npr. tokeni za reset lozinke) čuvaju se u tabeli `data_protection_keys`. Da ne bi stajali u bazi u običnom tekstu, u produkciji ih šifruj sertifikatom:

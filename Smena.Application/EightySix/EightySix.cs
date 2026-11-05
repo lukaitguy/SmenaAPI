@@ -54,6 +54,7 @@ public sealed class AddEightySixItemHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
     IValidator<AddEightySixItemCommand> validator,
+    IBoardNotifier board,
     TimeProvider time)
 {
     public async Task<Result<EightySixItemDto>> HandleAsync(AddEightySixItemCommand command, CancellationToken cancellationToken)
@@ -78,11 +79,13 @@ public sealed class AddEightySixItemHandler(
         db.EightySixItems.Add(item);
         await db.SaveChangesAsync(cancellationToken);
 
-        return await db.ProjectToDto(db.EightySixItems.Where(i => i.Id == item.Id)).FirstAsync(cancellationToken);
+        var dto = await db.ProjectToDto(db.EightySixItems.Where(i => i.Id == item.Id)).FirstAsync(cancellationToken);
+        await board.EightySixAddedAsync(item.RestaurantId, dto, cancellationToken);
+        return dto;
     }
 }
 
-public sealed class RemoveEightySixItemHandler(IAppDbContext db, ICurrentUser currentUser)
+public sealed class RemoveEightySixItemHandler(IAppDbContext db, ICurrentUser currentUser, IBoardNotifier board)
 {
     /// <summary>Stavka se vratila u ponudu: skida se sa liste.</summary>
     public async Task<Result> HandleAsync(Guid id, CancellationToken cancellationToken)
@@ -95,6 +98,7 @@ public sealed class RemoveEightySixItemHandler(IAppDbContext db, ICurrentUser cu
 
         db.EightySixItems.Remove(item);
         await db.SaveChangesAsync(cancellationToken);
+        await board.EightySixRemovedAsync(item.RestaurantId, item.Id, cancellationToken);
         return Result.Success();
     }
 }
