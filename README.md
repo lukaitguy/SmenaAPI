@@ -186,7 +186,7 @@ Svi mejlovi osim pozivnica idu kroz red u pozadini (`IEmailQueue`): zahtev samo 
 
 Pozivnice se šalju unutar zahteva: ako slanje ne uspe, pozivnica je ipak sačuvana, a menadžer dobija link u odgovoru (`emailSent: false`) pa ga može poslati sam.
 
-Linkovi u mejlovima vode na stranice aplikacije (`/raspored`, `/zahtevi`, `/zamene`, `/slobodni-dani`, `/najave`).
+Linkovi u mejlovima vode na stranice aplikacije (`/raspored`, `/zahtevi`, `/zamene`, `/slobodni-dani`, `/najave`). Pozivnica vodi na `/pozivnica#token`, a reset lozinke na `/nova-lozinka#email=…&token=…`; tajna stoji iza `#`, pa ne stiže ni u logove servera.
 
 ## Šabloni smena
 

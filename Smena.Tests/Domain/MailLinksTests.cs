@@ -9,13 +9,14 @@ namespace Smena.Tests.Domain;
 public class MailLinksTests
 {
     private static readonly string[] FrontendRoutes =
-        ["/raspored", "/zahtevi", "/zamene", "/slobodni-dani", "/najave", "/moje-smene", "/86-lista"];
+        ["/raspored", "/zahtevi", "/zamene", "/slobodni-dani", "/najave", "/moje-smene", "/86-lista", "/pozivnica", "/nova-lozinka"];
 
     private static readonly AppOptions Options = new() { FrontendUrl = "https://smena.example/" };
 
     public static TheoryData<string> Links => new()
     {
         Options.RequestsLink, Options.ScheduleLink, Options.SwapsLink, Options.DayOffsLink, Options.AnnouncementsLink,
+        Options.InvitationLink("tok"), Options.PasswordResetLink("a@b.rs", "tok"),
     };
 
     [Theory]

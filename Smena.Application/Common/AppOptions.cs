@@ -8,7 +8,7 @@ public sealed class AppOptions
     public string FrontendUrl { get; init; } = "http://localhost:4200";
 
     public string InvitationLink(string token) =>
-        $"{FrontendUrl.TrimEnd('/')}/join#{Uri.EscapeDataString(token)}";
+        $"{FrontendUrl.TrimEnd('/')}/pozivnica#{Uri.EscapeDataString(token)}";
 
     public string RequestsLink => $"{FrontendUrl.TrimEnd('/')}/zahtevi";
 
@@ -21,5 +21,5 @@ public sealed class AppOptions
     public string SwapsLink => $"{FrontendUrl.TrimEnd('/')}/zamene";
 
     public string PasswordResetLink(string email, string token) =>
-        $"{FrontendUrl.TrimEnd('/')}/reset-password#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+        $"{FrontendUrl.TrimEnd('/')}/nova-lozinka#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
 }
